@@ -2,618 +2,888 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fuselage Geometry Validator</title>
+<title>Interceptor_HL — Fuselage Geometry Viewer</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0a0e1a; color: #c8d8f0; font-family: 'Courier New', monospace; padding: 12px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #07090f;
+  color: #c8d8f0;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+h1 {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: #5588cc;
+  text-transform: uppercase;
+  padding: 12px 0 6px;
+  border-bottom: 1px solid #1a2a44;
+}
+h1 span { color: #66aaff; }
 
-  h2 {
-    text-align: center;
-    color: #4af;
-    font-size: 13px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
+/* Top info bar */
+.info-strip {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  font-size: 9px;
+  color: #445;
+  padding: 6px 0;
+  border-bottom: 1px solid #111e30;
+}
+.info-strip span { color: #5599cc; }
 
-  .info-bar {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    font-size: 10px;
-    color: #556;
-    margin-bottom: 14px;
-  }
-  .info-bar span { color: #8cf; }
+/* Two-column layout: left=2D panels, right=3D+table */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 8px;
+  padding: 8px;
+}
+.p2d {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.p3d-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
+/* Panels */
+.panel {
+  background: #0a1020;
+  border: 1px solid #1a2a44;
+  border-radius: 6px;
+  padding: 8px;
+  position: relative;
+}
+.panel-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #3366aa;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.panel-sub {
+  font-size: 8px;
+  color: #334466;
+  text-align: center;
+}
 
-  .panel {
-    background: #0d1424;
-    border: 1px solid #1a2a4a;
-    border-radius: 6px;
-    padding: 8px;
-  }
+/* SVG canvas areas */
+svg.display {
+  width: 100%;
+  display: block;
+  background: #080c18;
+  border-radius: 4px;
+}
 
-  .panel h3 {
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: #559;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    text-align: center;
-  }
+/* Three.js canvas */
+#three-canvas {
+  width: 100%;
+  height: 320px;
+  border-radius: 4px;
+  background: #06090f;
+}
 
-  svg { display: block; width: 100%; border-radius: 4px; }
+/* Physics table */
+.table-wrap {
+  max-height: 320px;
+  overflow-y: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+}
+th {
+  background: #0f1a2a;
+  color: #4477aa;
+  letter-spacing: 1px;
+  padding: 4px 6px;
+  text-align: center;
+  border-bottom: 1px solid #1a2a44;
+  position: sticky;
+  top: 0;
+}
+td {
+  padding: 3px 6px;
+  text-align: center;
+  border-bottom: 1px solid #0e1828;
+  color: #8899aa;
+}
+td.xcol { color: #66aaff; }
+td.rcol { color: #88ccff; }
+td.ycol { color: #77bb77; }
+td.zcol { color: #cc8866; }
+tr:hover td { background: #111e35; }
+tr.sta-hdr { background: #0d1828; color: #4499cc; font-weight: bold; }
+tr.attach-row { background: #1a1200; color: #ffaa44; }
 
-  /* Fuselage shape styles */
-  .fuse-skin { fill: none; stroke: #4af; stroke-width: 1.5; }
-  .fuse-fill { fill: rgba(68,170,255,0.04); }
-  .fuse-ring { fill: none; stroke: rgba(100,170,255,0.25); stroke-width: 0.5; stroke-dasharray: 3,3; }
-  .centerline { stroke: #334; stroke-width: 0.5; stroke-dasharray: 4,4; }
-  .axis-line { stroke: #222; stroke-width: 0.5; }
-  .dot { fill: #4af; stroke: #4af; stroke-width: 0.5; }
-  .dot-tip { fill: #fff; stroke: #4af; stroke-width: 1; }
-  .attach { fill: #f80; stroke: #f80; stroke-width: 0.5; r: 3; }
-  .attach-label { font-size: 7px; fill: #f80; font-family: 'Courier New', monospace; }
-  .sta-label { font-size: 7px; fill: #448; font-family: 'Courier New', monospace; }
-  .grid-line { stroke: #151525; stroke-width: 0.5; }
-  .nose-label { font-size: 8px; fill: #5af; font-family: 'Courier New', monospace; }
-  .scale-bar { font-size: 8px; fill: #446; font-family: 'Courier New', monospace; }
+/* Vector arrows in SVG */
+.v-arrow { stroke: #4499cc; stroke-width: 0.8; fill: none; }
+.v-dot   { fill: #4499cc; }
+.v-label { fill: #334466; font-size: 8px; font-family: 'Courier New', monospace; }
+.skin-upper { fill: none; stroke: #2255aa; stroke-width: 1.5; }
+.skin-lower { fill: none; stroke: #224488; stroke-width: 1.5; }
+.skin-boat  { fill: none; stroke: #664422; stroke-width: 1.2; dasharray: 4,2; }
+.ring-cs    { fill: none; stroke: #1a3a6a; stroke-width: 0.8; }
+.centerline { stroke: #223344; stroke-width: 0.5; }
+.grid-sm    { stroke: #0e1828; stroke-width: 0.4; }
+.grid-md    { stroke: #111e30; stroke-width: 0.5; }
+.dim-line   { stroke: #334466; stroke-width: 0.5; stroke-dasharray: 2,3; }
+.dim-text   { fill: #334466; font-size: 8px; }
+.ogive-line { stroke: #4466aa; stroke-width: 1.5; }
+.attach-pt  { fill: #ffaa44; stroke: none; }
+.attach-label { fill: #ffaa44; font-size: 7px; }
+.scale-bar  { stroke: #334455; stroke-width: 1; }
+.scale-tick { stroke: #334455; stroke-width: 0.8; }
 
-  .table-panel {
-    background: #0d1424;
-    border: 1px solid #1a2a4a;
-    border-radius: 6px;
-    padding: 8px;
-    margin-top: 8px;
-    max-height: 260px;
-    overflow-y: auto;
-  }
-  .table-panel h3 { font-size: 9px; letter-spacing: 2px; color: #559; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
-  table { border-collapse: collapse; width: 100%; font-size: 9px; }
-  th { color: #448; letter-spacing: 1px; font-size: 8px; position: sticky; top: 0; background: #0d1424; }
-  td, th { padding: 3px 6px; border: 1px solid #151530; text-align: center; }
-  tr:hover td { background: #131f38; }
-  td.sta-hdr { color: #4af; font-weight: bold; }
-  td.attach-row { color: #f80; background: #1a1000; }
+/* Controls */
+.ctrl-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 6px;
+  flex-wrap: wrap;
+}
+button {
+  background: #0d1830;
+  color: #5588bb;
+  border: 1px solid #1a2a44;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 9px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+button:hover { background: #152840; color: #88aacc; border-color: #2a4a6a; }
+button:active { background: #1a3050; }
+button.active { background: #1a3050; color: #88ccff; border-color: #3366aa; }
+select {
+  background: #0d1830;
+  color: #5588bb;
+  border: 1px solid #1a2a44;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+}
 
-  .btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
-  button {
-    background: #0d1424; color: #4af; border: 1px solid #2a4a6a;
-    padding: 6px 14px; border-radius: 4px; cursor: pointer;
-    font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 1px;
-    transition: background 0.2s;
-  }
-  button:hover { background: #1a2a4a; border-color: #4af; }
-  button:active { background: #2a3a5a; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #06090f; }
+::-webkit-scrollbar-thumb { background: #1a2a44; border-radius: 3px; }
 
-  /* Scrollbar styling */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #0a0e1a; }
-  ::-webkit-scrollbar-thumb { background: #2a4a6a; border-radius: 3px; }
+/* 3D view toggle */
+.three-wrap { position: relative; }
+.three-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 8px;
+  color: #223344;
+}
 </style>
 </head>
 <body>
 
-<h2>// Fuselage Geometry Validator //</h2>
-<div class="info-bar">
-  <div>Length: <span>360 mm</span></div>
-  <div>Max Ø: <span>Ø 36 mm</span></div>
-  <div>Scale: <span>3 px/mm</span></div>
-  <div>Stations: <span>7</span></div>
-  <div>Vectors: <span>56</span></div>
-  <div>Nose: <span>Conical</span></div>
+<h1>// INTERCEPTOR_HL — Fuselage Geometry Viewer //</h1>
+<div class="info-strip">
+  <div>L: <span id="dL">360</span> mm</div>
+  <div>Ø max: <span id="dD">36</span> mm</div>
+  <div>Stations: <span id="dN">30</span></div>
+  <div>Vectors: <span id="dV">—</span></div>
+  <div>Nose: <span id="dNose">Ogive</span></div>
+  <div>Scale: <span>2.5 px/mm</span></div>
+  <div><span id="dMode">3D + 2D</span></div>
 </div>
 
-<div class="grid">
-  <div class="panel">
-    <h3>TOP VIEW &mdash; X-Y plane</h3>
-    <svg id="topView" viewBox="-30 -100 1140 200"></svg>
+<!-- 2D panels -->
+<div class="main-layout">
+  <div class="p2d">
+    <!-- Side profile view -->
+    <div class="panel">
+      <div class="panel-title">SIDE PROFILE — X-Z Plane</div>
+      <div class="panel-sub">ogive nose · cylindrical body · boat-tail</div>
+      <svg id="side-svg" class="display" viewBox="-40 -80 970 160" height="110"></svg>
+    </div>
+    <!-- Top view -->
+    <div class="panel">
+      <div class="panel-title">TOP VIEW — X-Y Plane</div>
+      <div class="panel-sub">fuselage cross-section silhouette</div>
+      <svg id="top-svg" class="display" viewBox="-40 -55 970 110" height="70"></svg>
+    </div>
+    <!-- Cross-sections -->
+    <div class="panel">
+      <div class="panel-title">CROSS-SECTIONS — Y-Z Plane</div>
+      <div class="panel-sub">at key stations (nose / mid / tail)</div>
+      <svg id="cs-svg" class="display" viewBox="0 0 960 100" height="80"></svg>
+    </div>
   </div>
-  <div class="panel">
-    <h3>SIDE VIEW &mdash; X-Z plane</h3>
-    <svg id="sideView" viewBox="-30 -150 1140 300"></svg>
+
+  <!-- 3D + Table -->
+  <div class="p3d-col">
+    <div class="panel three-wrap">
+      <div class="panel-title">3D VIEW — Three.js</div>
+      <div class="panel-sub">drag to rotate · scroll to zoom</div>
+      <canvas id="three-canvas"></canvas>
+      <div class="three-hint">mouse: rotate | wheel: zoom</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">VECTOR TABLE — x, y, z (mm)</div>
+      <div class="table-wrap">
+        <table id="vec-table"><tbody></tbody></table>
+      </div>
+    </div>
   </div>
-  <div class="panel">
-    <h3>ISOMETRIC &mdash; 3D projection</h3>
-    <svg id="isoView" viewBox="-100 -220 560 440"></svg>
-  </div>
 </div>
 
-<div class="table-panel">
-  <h3>Vector Table &mdash; (x, y, z) mm</h3>
-  <table id="vecTable"><tbody></tbody></table>
+<!-- Controls -->
+<div class="ctrl-row">
+  <button onclick="toggleView('side')" id="btn-side" class="active">SIDE</button>
+  <button onclick="toggleView('top')" id="btn-top" class="active">TOP</button>
+  <button onclick="toggleView('cs')" id="btn-cs" class="active">CROSS-SEC</button>
+  <button onclick="toggleView('table')" id="btn-table" class="active">TABLE</button>
+  <select id="sec-select" onchange="drawAll()">
+    <option value="all">All Sections</option>
+    <option value="nose">Nose only</option>
+    <option value="body">Body only</option>
+    <option value="tail">Boat-tail only</option>
+  </select>
+  <select id="vec-select" onchange="drawAll()">
+    <option value="12">12 vectors/sta (30°)</option>
+    <option value="8">8 vectors/sta (45°)</option>
+    <option value="4">4 vectors/sta (90°)</option>
+    <option value="1">1 vector/sta</option>
+  </select>
+  <button onclick="exportData()">EXPORT TSX</button>
 </div>
 
-<div class="btn-row">
-  <button onclick="exportTSX()">&#9654; Export to knowledge.tsx</button>
-  <button onclick="toggleTable()">&#9660; Toggle Table</button>
-  <button onclick="toggleIso()">&#8634; Toggle Isometric Style</button>
-</div>
-
+<!-- Three.js via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ─────────────────────────────────────────────
-// FUSELAGE GEOMETRY DATA
-// ─────────────────────────────────────────────
-// Scale: 3 px per mm
-const SCALE = 3;
+// ================================================================
+// PHYSICS-BASED FUSELAGE GEOMETRY (Mason Appendix)
+// ================================================================
+// Ogive: r² = a² - (x - c)²  (tangent ogive)
+// Boat-tail: linear taper from body to nozzle
+// ================================================================
 
-const stations = [
-  { label:"STA_000", x:  0, r:  0 },
-  { label:"STA_040", x: 40, r: 18 },
-  { label:"STA_120", x:120, r: 18 },
-  { label:"STA_240", x:240, r: 18 },
-  { label:"STA_300", x:300, r: 18 },
-  { label:"STA_330", x:330, r: 18 },
-  { label:"STA_360", x:360, r:  7 },
-];
+const SCALE = 2.5; // px per mm
+const TOTAL_LEN = 360; // mm
+const MAX_R = 18; // mm (body radius)
+const NOSE_LEN = 40; // mm
+const TAIL_START = 330; // mm (boat-tail begins)
+const NOZZLE_R = 7; // mm
 
-const centerline = [
-  [0,0,0],[40,0,0],[120,0,0],[240,0,0],[300,0,0],[330,0,0],[360,0,0]
-];
+// Compute ogive parameters so curve passes through (nose_len, MAX_R)
+const ogive_a = (NOSE_LEN * NOSE_LEN + MAX_R * MAX_R) / (2 * MAX_R); // ~62.2 mm
+const ogive_c = ogive_a - MAX_R;                                     // ~44.2 mm from tip
 
-const attachPoints = {
-  "WING_ROOT_R":   {pos:[120, 18,  0]},
-  "WING_ROOT_L":   {pos:[120,-18,  0]},
-  "H_STAB_ROOT_R": {pos:[290, 18,  0]},
-  "H_STAB_ROOT_L": {pos:[290,-18,  0]},
-  "V_STAB_ROOT":   {pos:[290,  0, 18]},
-  "NOSE_PORT_TOP": {pos:[ 30,  0, 18]},
-  "INTAKE_LIP":    {pos:[360,  7,  0]},
-  "CANOPY_RAF":    {pos:[ 80,  0, 18]},
-};
-
-// ─────────────────────────────────────────────
-// SVG HELPERS
-// ─────────────────────────────────────────────
-function el(tag, attrs) {
-  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [k,v] of Object.entries(attrs||{})) e.setAttribute(k, v);
-  return e;
+// Generate 30 stations with physics-accurate radii
+function generateStations(n = 30) {
+  const stations = [];
+  for (let i = 0; i <= n; i++) {
+    const x = (i / n) * TOTAL_LEN;
+    let r;
+    if (x <= NOSE_LEN) {
+      // Ogive: r = sqrt(a² - (x - c)²)
+      const dx = x - ogive_c;
+      r = Math.sqrt(Math.max(0, ogive_a * ogive_a - dx * dx));
+    } else if (x <= TAIL_START) {
+      // Cylindrical body
+      r = MAX_R;
+    } else {
+      // Boat-tail: linear taper
+      const t = (x - TAIL_START) / (TOTAL_LEN - TAIL_START);
+      r = MAX_R - t * (MAX_R - NOZZLE_R);
+    }
+    stations.push({ x: Math.round(x * 10) / 10, r: Math.round(r * 100) / 100 });
+  }
+  return stations;
 }
-function line(x1,y1,x2,y2,cls) { return el("line",{x1,y1,x2,y2,class:cls||""}); }
-function circle(cx,cy,r,cls) { return el("circle",{cx,cy,r,class:cls||""}); }
-function text(x,y,txt,cls,anchor) {
-  const t = el("text",{x,y,class:cls||"", "text-anchor":anchor||"middle"});
+
+const stations = generateStations(30);
+
+// Station labels for key stations
+const keyStaLabels = [0, 10, 20, 30, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 310, 320, 330, 340, 350, 360];
+const keyStations = stations.filter((_, i) => i % Math.ceil(stations.length / 24) === 0 || i === stations.length - 1);
+
+// ================================================================
+// SVG HELPERS
+// ================================================================
+function mk(tag, attrs = {}) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+function L(x1, y1, x2, y2, cls = "") {
+  const l = mk("line", { x1, y1, x2, y2 });
+  if (cls) l.setAttribute("class", cls);
+  return l;
+}
+function C(cx, cy, r, cls = "") {
+  const c = mk("ellipse", { cx, cy, rx: 0.5, ry: r });
+  if (cls) c.setAttribute("class", cls);
+  return c;
+}
+function P(pts, cls = "") {
+  const p = mk("polyline", { points: pts.map(p => `${p[0]},${p[1]}`).join(" ") });
+  if (cls) p.setAttribute("class", cls);
+  return p;
+}
+function T(x, y, txt, cls = "", anchor = "middle") {
+  const t = mk("text", { x, y });
   t.textContent = txt;
+  if (cls) t.setAttribute("class", cls);
+  t.setAttribute("text-anchor", anchor);
   return t;
 }
+function G() { return mk("g"); }
 
-// ─────────────────────────────────────────────
+// ================================================================
 // ISOMETRIC PROJECTION
-// ─────────────────────────────────────────────
-function iso(x,y,z) {
+// ================================================================
+function iso(x, y, z) {
   // Standard isometric: 30° angles
-  const ix =  x * SCALE      - y * SCALE * 0.5;
-  const iy = -x * SCALE * 0.3 - y * SCALE * 0.3 - z * SCALE;
-  return {ix, iy};
+  const c30 = Math.cos(Math.PI / 6); // 0.866
+  const s30 = Math.sin(Math.PI / 6); // 0.5
+  const ix = (x - y) * c30;
+  const iy = (x + y) * s30 - z;
+  return { ix, iy };
 }
 
-// ─────────────────────────────────────────────
-// GRID DRAWING
-// ─────────────────────────────────────────────
-function drawGrid(svg, w, h) {
-  const g = el("g",{});
-  // Vertical grid lines every 60mm = 180px
-  for (let x = 0; x <= 1080; x += 180) {
-    g.appendChild(line(x, -h/2, x, h/2, "grid-line"));
-  }
-  // Horizontal grid lines every 30px
-  for (let y = -h/2; y <= h/2; y += 30) {
-    g.appendChild(line(0, y, w, y, "grid-line"));
-  }
-  svg.appendChild(g);
-}
-
-function drawIsoGrid(svg) {
-  const g = el("g",{});
-  // Vertical grid (Z)
-  for (let z = -200; z <= 0; z += 30) {
-    for (let x = 0; x <= 1080; x += 90) {
-      const p1 = iso(x, 0, z);
-      const p2 = iso(x+90, 0, z);
-      g.appendChild(line(p1.ix, p1.iy, p2.ix, p2.iy, "grid-line"));
-    }
-  }
-  // Horizontal grid (Y)
-  for (let y = -90; y <= 90; y += 30) {
-    for (let x = 0; x <= 1080; x += 90) {
-      const p1 = iso(x, y, 0);
-      const p2 = iso(x+90, y, 0);
-      g.appendChild(line(p1.ix, p1.iy, p2.ix, p2.iy, "grid-line"));
-    }
-  }
-  svg.appendChild(g);
-}
-
-// ─────────────────────────────────────────────
-// TOP VIEW — circles at each station (XZ plane)
-// ─────────────────────────────────────────────
-function buildTopView() {
-  const svg = document.getElementById("topView");
-  const w = 1140, h = 200;
-  svg.setAttribute("viewBox", `-30 -100 ${w} ${h}`);
-
-  drawGrid(svg, w, h);
-
-  // Draw fuselage rings (cross-sections)
-  stations.forEach(st => {
-    if (st.r === 0) {
-      // Nose tip
-      svg.appendChild(circle(0, 0, 2, "dot-tip"));
-      svg.appendChild(text(0, -8, "TIP", "sta-label"));
-      return;
-    }
-    const rx = 0.5, ry = st.r * SCALE;
-    const path = document.createElementNS("http://www.w3.org/2000/svg","ellipse");
-    path.setAttribute("cx", st.x * SCALE);
-    path.setAttribute("cy", 0);
-    path.setAttribute("rx", rx);
-    path.setAttribute("ry", ry);
-    path.setAttribute("class", "fuse-ring");
-    svg.appendChild(path);
-  });
-
-  // Fuselage outline (silhouette in Y direction)
-  const silhouette = [
-    [0,0],
-    [40*SCALE, 18*SCALE],
-    [120*SCALE, 18*SCALE],
-    [240*SCALE, 18*SCALE],
-    [300*SCALE, 18*SCALE],
-    [330*SCALE, 18*SCALE],
-    [360*SCALE, 7*SCALE],
-    [360*SCALE, -7*SCALE],
-    [330*SCALE, -18*SCALE],
-    [300*SCALE, -18*SCALE],
-    [240*SCALE, -18*SCALE],
-    [120*SCALE, -18*SCALE],
-    [40*SCALE, -18*SCALE],
-    [0, 0],
-  ];
-  const pts = silhouette.map(p=>p.join(",")).join(" ");
-  const p = el("polygon", {points:pts, class:"fuse-fill"});
-  svg.appendChild(p);
-  const p2 = el("polyline", {points:pts, class:"fuse-skin"});
-  svg.appendChild(p2);
-
-  // Axis
-  svg.appendChild(line(0, 0, 1080, 0, "axis-line"));
-  svg.appendChild(text(-18, 4, "Y", "sta-label", "middle"));
-  svg.appendChild(text(1100, 4, "X", "sta-label", "end"));
-
-  // Station labels
-  stations.forEach(st => {
-    svg.appendChild(text(st.x*SCALE, -st.r*SCALE-10, st.label, "sta-label"));
-  });
-
-  // Scale bar
-  svg.appendChild(line(50, 80, 50+300, 80, "fuse-skin"));
-  svg.appendChild(text(200, 75, "100 mm", "scale-bar"));
-
-  // Attachment points
-  Object.entries(attachPoints).forEach(([name, ap]) => {
-    const [px, py] = ap.pos;
-    const cx = px * SCALE;
-    const cy = py * SCALE;
-    svg.appendChild(circle(cx, cy, 3, "attach"));
-    svg.appendChild(text(cx+5, cy-5, name, "attach-label", "start"));
-  });
-}
-
-// ─────────────────────────────────────────────
-// SIDE VIEW — profile (X-Z plane)
-// ─────────────────────────────────────────────
-function buildSideView() {
-  const svg = document.getElementById("sideView");
-  const w = 1140, h = 300;
-  svg.setAttribute("viewBox", `-30 -130 ${w} ${h}`);
-
-  drawGrid(svg, w, h);
-
-  // Fuselage profile: upper edge points (conical nose, cylinder, tapered tail)
-  // Upper profile: Z = +radius at each x
-  const upper = [
-    [0,  0],   // nose tip
-    [40, 18],  // nose shoulder
-    [120, 18], // body
-    [240, 18],
-    [300, 18],
-    [330, 18], // start of taper
-    [360,  7], // engine mouth
-  ];
-  const upperPts = upper.map(p=>`${p[0]*SCALE},${-p[1]*SCALE}`).join(" ");
-  const lowerPts = upper.map(p=>`${p[0]*SCALE},${p[1]*SCALE}`).join(" ");
-
-  const fillPts = upperPts + " " + lowerPts.split(" ").reverse().join(" ");
-  svg.appendChild(el("polygon", {points:fillPts, class:"fuse-fill"}));
-
-  // Upper silhouette
-  const uPts = upper.map(p=>`${p[0]*SCALE},${-p[1]*SCALE}`).join(" ");
-  svg.appendChild(el("polyline", {points:uPts, class:"fuse-skin"}));
-  // Lower silhouette
-  const lPts = upper.map(p=>`${p[0]*SCALE},${p[1]*SCALE}`).join(" ");
-  svg.appendChild(el("polyline", {points:lPts, class:"fuse-skin"}));
-
-  // Nose angle annotation
-  const noseAngle = Math.atan2(18,40) * 180/Math.PI;
-  const nx = 20*SCALE, ny = -9*SCALE;
-  svg.appendChild(text(nx, ny, `α=${noseAngle.toFixed(1)}°`, "nose-label", "start"));
-
-  // Station rings (horizontal lines at each station)
-  stations.forEach(st => {
-    if (st.r === 0) {
-      svg.appendChild(circle(0, 0, 2, "dot-tip"));
-      svg.appendChild(text(0, 10, "TIP", "sta-label"));
-      return;
-    }
-    const cx = st.x * SCALE;
-    svg.appendChild(line(cx, -st.r*SCALE, cx, st.r*SCALE, "fuse-ring"));
-  });
-
-  // Centerline
-  svg.appendChild(line(0, 0, 1080, 0, "centerline"));
-  svg.appendChild(text(-18, 4, "Z", "sta-label"));
-  svg.appendChild(text(1100, 4, "X", "sta-label", "end"));
-
-  // Scale bar
-  svg.appendChild(line(50, 120, 50+300, 120, "fuse-skin"));
-  svg.appendChild(text(200, 115, "100 mm", "scale-bar"));
-
-  // Station labels
-  stations.forEach(st => {
-    svg.appendChild(text(st.x*SCALE, st.r*SCALE+12, st.label, "sta-label"));
-  });
-
-  // Attachment points
-  Object.entries(attachPoints).forEach(([name, ap]) => {
-    const [px,, pz] = ap.pos;
-    const cx = px * SCALE;
-    const cz = pz * SCALE;
-    svg.appendChild(circle(cx, -cz, 3, "attach"));
-    svg.appendChild(text(cx+5, -(cz)-5, name, "attach-label", "start"));
-  });
-}
-
-// ─────────────────────────────────────────────
-// ISOMETRIC VIEW
-// ─────────────────────────────────────────────
-let isoStyle = 0;
-const isoStyles = [
-  { ringAlpha:"0.3",  skinWidth:1.5, bg:"#0d1424" },
-  { ringAlpha:"0.6",  skinWidth:2.0, bg:"#0d1424" },
-  { ringAlpha:"0.15", skinWidth:1.0, bg:"#0d1424" },
-];
-
-function buildIsoView() {
-  const svg = document.getElementById("isoView");
+// ================================================================
+// DRAW SIDE VIEW
+// ================================================================
+function drawSideView() {
+  const svg = document.getElementById("side-svg");
   svg.innerHTML = "";
-  svg.setAttribute("viewBox", `-100 -220 560 440`);
-  svg.style.background = isoStyles[isoStyle].bg;
 
-  drawIsoGrid(svg);
-
-  const stl = isoStyles[isoStyle];
-
-  // Draw cross-section rings
-  stations.forEach(st => {
-    if (st.r === 0) {
-      const p = iso(0, 0, 0);
-      svg.appendChild(circle(p.ix, p.iy, 3, "dot-tip"));
-      return;
-    }
-    let ringPts = [];
-    for (let a = 0; a <= 360; a += 10) {
-      const theta = a * Math.PI / 180;
-      const y = st.r * Math.cos(theta);
-      const z = st.r * Math.sin(theta);
-      const p = iso(st.x, y, z);
-      ringPts.push(`${p.ix},${p.iy}`);
-    }
-    const ringPath = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-    ringPath.setAttribute("points", ringPts.join(" "));
-    ringPath.setAttribute("fill", "none");
-    ringPath.setAttribute("stroke", `rgba(68,170,255,${stl.ringAlpha})`);
-    ringPath.setAttribute("stroke-width", stl.skinWidth * 0.5);
-    ringPath.setAttribute("stroke-dasharray", "3,3");
-    svg.appendChild(ringPath);
-  });
-
-  // Fuselage skin lines (longitudinal)
-  const angles = [0, 45, 90, 135, 180, 225, 270, 315].map(a => a * Math.PI / 180);
-  angles.forEach(theta => {
-    let upperPts = [];
-    let lowerPts = [];
-    stations.forEach(st => {
-      if (st.r === 0) {
-        const p = iso(st.x, 0, 0);
-        upperPts.push([p.ix, p.iy]);
-        lowerPts.push([p.ix, p.iy]);
-        return;
-      }
-      const y = st.r * Math.cos(theta);
-      const z = st.r * Math.sin(theta);
-      const p = iso(st.x, y, z);
-      upperPts.push([p.ix, p.iy - z * SCALE * 0.05]);
-      lowerPts.push([p.ix, p.iy + z * SCALE * 0.05]);
-    });
-    const pathStr = pts => pts.map(p=>p.join(",")).join(" ");
-    const sp = el("polyline", {points:pathStr(upperPts), class:"fuse-skin"});
-    sp.setAttribute("stroke-width", stl.skinWidth * 0.4);
-    svg.appendChild(sp);
-  });
+  // Grid
+  for (let x = 0; x <= 900; x += 60) {
+    svg.appendChild(L(x, -75, x, 75, "grid-md"));
+    svg.appendChild(T(x, 5, `${Math.round(x/SCALE)}`, "dim-text", "middle"));
+  }
+  for (let z = -60; z <= 60; z += 15) {
+    svg.appendChild(L(0, -z*SCALE/1, 900, -z*SCALE/1, "grid-sm"));
+  }
 
   // Centerline
-  let clPts = [];
-  stations.forEach(st => {
-    const p = iso(st.x, 0, 0);
-    clPts.push(`${p.ix},${p.iy}`);
-  });
-  svg.appendChild(el("polyline", {points:clPts.join(" "), class:"centerline"}));
+  svg.appendChild(L(0, 0, 900, 0, "centerline"));
 
-  // Station labels
+  // Upper skin profile (Z = +r)
+  const upperPts = stations.map(st => [st.x * SCALE, -st.r * SCALE]);
+  svg.appendChild(P(upperPts, "skin-upper"));
+
+  // Lower skin profile
+  const lowerPts = stations.map(st => [st.x * SCALE, st.r * SCALE]);
+  svg.appendChild(P(lowerPts, "skin-lower"));
+
+  // Nose ogive label
+  const ang = Math.atan2(MAX_R, NOSE_LEN) * 180 / Math.PI;
+  const nx = NOSE_LEN * SCALE * 0.5;
+  const ny = -MAX_R * SCALE * 0.5 - 6;
+  svg.appendChild(T(nx, ny, `ogive α≈${ang.toFixed(1)}°`, "dim-text"));
+
+  // Boat-tail section
+  const btStart = TAIL_START * SCALE;
+  const btEnd = TOTAL_LEN * SCALE;
+  svg.appendChild(L(btStart, -MAX_R * SCALE, btEnd, -NOZZLE_R * SCALE, "skin-boat"));
+  svg.appendChild(L(btStart, MAX_R * SCALE, btEnd, NOZZLE_R * SCALE, "skin-boat"));
+  svg.appendChild(T((btStart + btEnd) / 2, -10, "boat-tail", "dim-text"));
+
+  // Station rings (horizontal lines at key stations)
   stations.forEach(st => {
-    const p = iso(st.x, -24, 24);
-    svg.appendChild(text(p.ix, p.iy, st.label, "sta-label"));
+    if (st.x % 60 < 0.5) {
+      const cx = st.x * SCALE;
+      svg.appendChild(L(cx, -st.r * SCALE, cx, st.r * SCALE, "ring-cs"));
+    }
   });
 
-  // Attachment points
-  Object.entries(attachPoints).forEach(([name, ap]) => {
-    const [px, py, pz] = ap.pos;
-    const p = iso(px, py, pz);
-    svg.appendChild(circle(p.ix, p.iy, 4, "attach"));
-    svg.appendChild(text(p.ix + 5, p.iy - 4, name, "attach-label", "start"));
+  // Vectors: outward arrows at each station (Z direction only)
+  const nVec = parseInt(document.getElementById("sec-select").value === "all" ? 1 : 1);
+  stations.forEach((st, i) => {
+    if (i % 3 !== 0 && i !== stations.length - 1) return;
+    const cx = st.x * SCALE;
+    const cy = -st.r * SCALE;
+    const arrowLen = 20;
+    // Up arrow
+    const ey = cy - arrowLen;
+    svg.appendChild(L(cx, cy, cx, ey, "v-arrow"));
+    svg.appendChild(T(cx, ey - 5, "↑", "v-dot", "middle"));
+    // Down arrow
+    const ey2 = st.r * SCALE + arrowLen;
+    svg.appendChild(L(cx, st.r * SCALE, cx, ey2, "v-arrow"));
+    svg.appendChild(T(cx, ey2 + 6, "↓", "v-dot", "middle"));
   });
+
+  // Dimension: nose length
+  svg.appendChild(L(0, -MAX_R * SCALE - 15, NOSE_LEN * SCALE, -MAX_R * SCALE - 15, "dim-line"));
+  svg.appendChild(L(0, -MAX_R * SCALE - 18, 0, -MAX_R * SCALE - 12, "dim-line"));
+  svg.appendChild(L(NOSE_LEN * SCALE, -MAX_R * SCALE - 18, NOSE_LEN * SCALE, -MAX_R * SCALE - 12, "dim-line"));
+  svg.appendChild(T(NOSE_LEN * SCALE / 2, -MAX_R * SCALE - 20, "40 mm", "dim-text"));
+
+  // Dimension: total length
+  svg.appendChild(L(0, MAX_R * SCALE + 15, TOTAL_LEN * SCALE, MAX_R * SCALE + 15, "dim-line"));
+  svg.appendChild(L(0, MAX_R * SCALE + 18, 0, MAX_R * SCALE + 12, "dim-line"));
+  svg.appendChild(L(TOTAL_LEN * SCALE, MAX_R * SCALE + 18, TOTAL_LEN * SCALE, MAX_R * SCALE + 12, "dim-line"));
+  svg.appendChild(T(TOTAL_LEN * SCALE / 2, MAX_R * SCALE + 22, "360 mm", "dim-text"));
 
   // Axis labels
-  svg.appendChild(text(iso(1080,0,0).ix + 10, iso(1080,0,0).iy + 4, "X", "sta-label", "start"));
-  svg.appendChild(text(iso(0,100,0).ix, iso(0,100,0).iy, "Y", "sta-label"));
-  svg.appendChild(text(iso(0,0,-100).ix, iso(0,0,-100).iy, "Z", "sta-label"));
+  svg.appendChild(T(-5, -60, "Z", "v-dot", "end"));
+  svg.appendChild(T(-5, 70, "−Z", "v-dot", "end"));
+  svg.appendChild(T(880, 5, "→ X (mm)", "dim-text"));
+
+  // Attachment points (from knowledge.tsx)
+  const attach = {
+    "WING_ROOT":    { x: 120, z: MAX_R },
+    "H_STAB_ROOT":  { x: 290, z: MAX_R },
+    "V_STAB_ROOT":  { x: 290, z: MAX_R },
+    "NOSE_PORT":    { x: 30,  z: MAX_R },
+    "CANOPY_RAF":   { x: 80,  z: MAX_R },
+    "INTAKE_LIP":   { x: 360, z: NOZZLE_R },
+  };
+  Object.entries(attach).forEach(([name, pt]) => {
+    const cx = pt.x * SCALE;
+    const cz = pt.z * SCALE;
+    svg.appendChild(C(cx, -cz, 3, "attach-pt"));
+    svg.appendChild(T(cx + 5, -cz - 3, name, "attach-label"));
+  });
+
+  // Scale bar
+  const barY = 60;
+  svg.appendChild(L(20, barY, 220, barY, "scale-bar"));
+  svg.appendChild(L(20, barY - 4, 20, barY + 4, "scale-tick"));
+  svg.appendChild(L(220, barY - 4, 220, barY + 4, "scale-tick"));
+  svg.appendChild(T(120, barY + 10, "80 mm", "dim-text"));
 }
 
-function toggleIso() {
-  isoStyle = (isoStyle + 1) % isoStyles.length;
-  buildIsoView();
+// ================================================================
+// DRAW TOP VIEW
+// ================================================================
+function drawTopView() {
+  const svg = document.getElementById("top-svg");
+  svg.innerHTML = "";
+
+  // Grid
+  for (let x = 0; x <= 900; x += 60) svg.appendChild(L(x, -50, x, 50, "grid-md"));
+  for (let y = -45; y <= 45; y += 15) svg.appendChild(L(0, y, 900, y, "grid-sm"));
+
+  // Fuselage silhouette (outline in Y)
+  const upperSil = stations.map(st => [st.x * SCALE, -st.r * SCALE]);
+  const lowerSil = stations.map(st => [st.x * SCALE, st.r * SCALE]).reverse();
+  const silPts = [...upperSil, ...lowerSil];
+  svg.appendChild(P(silPts, "skin-upper"));
+
+  // Centerline
+  svg.appendChild(L(0, 0, 900, 0, "centerline"));
+
+  // Cross-section circles at key stations
+  [40, 120, 240, 300, 330, 360].forEach(x => {
+    const st = stations.find(s => Math.abs(s.x - x) < 2);
+    if (!st) return;
+    const cx = st.x * SCALE;
+    svg.appendChild(C(cx, 0, st.r * SCALE, "ring-cs"));
+    svg.appendChild(T(cx, -st.r * SCALE - 5, `${x}mm`, "dim-text"));
+  });
+
+  // Attachment points (wing roots etc.)
+  const cx120 = 120 * SCALE;
+  svg.appendChild(C(cx120, 0, MAX_R * SCALE, "attach-pt"));
+  svg.appendChild(T(cx120 + 5, 5, "WING_ROOT", "attach-label"));
+
+  // Axis labels
+  svg.appendChild(T(880, 5, "→ X (mm)", "dim-text"));
+  svg.appendChild(T(-5, -45, "Y+", "v-dot", "end"));
+  svg.appendChild(T(-5, 45, "Y−", "v-dot", "end"));
+
+  // Scale bar
+  svg.appendChild(L(20, 40, 220, 40, "scale-bar"));
+  svg.appendChild(T(120, 50, "80 mm", "dim-text"));
+
+  // Station labels
+  stations.forEach(st => {
+    if (st.x % 60 < 0.5) {
+      svg.appendChild(T(st.x * SCALE, 5, `${st.x}`, "dim-text"));
+    }
+  });
 }
 
-// ─────────────────────────────────────────────
+// ================================================================
+// DRAW CROSS-SECTIONS (Y-Z plane at key X stations)
+// ================================================================
+function drawCrossSections() {
+  const svg = document.getElementById("cs-svg");
+  svg.innerHTML = "";
+
+  const csStations = [0, 40, 120, 240, 330, 360];
+  const slotW = 960 / csStations.length;
+
+  csStations.forEach((xVal, idx) => {
+    const st = stations.find(s => Math.abs(s.x - xVal) < 3) || stations[idx * 5];
+    const cx = idx * slotW + slotW / 2;
+    const cy = 50;
+    const r = st.r * 1.5;
+
+    // Draw ellipse (Y-Z cross-section)
+    const ell = mk("ellipse", {
+      cx, cy,
+      rx: r, ry: r,
+      fill: "rgba(34,85,170,0.08)",
+      stroke: "#2255aa",
+      "stroke-width": "1"
+    });
+    svg.appendChild(ell);
+
+    // Axis lines
+    svg.appendChild(L(cx - r - 10, cy, cx + r + 10, cy, "grid-sm"));
+    svg.appendChild(L(cx, 5, cx, 95, "grid-sm"));
+
+    // Label
+    svg.appendChild(T(cx, 97, `x=${st.x}mm r=${st.r}mm`, "dim-text"));
+
+    // Vectors: 8 directions around the circle
+    const nVec = 8;
+    for (let a = 0; a < 360; a += 360 / nVec) {
+      const rad = a * Math.PI / 180;
+      const ey2 = cy + Math.sin(rad) * (r + 12);
+      const ex = cx + Math.cos(rad) * (r + 12);
+      const ty = cy + Math.sin(rad) * (r + 20);
+      const tx = cx + Math.cos(rad) * (r + 20);
+      svg.appendChild(L(cx + Math.cos(rad) * r, cy + Math.sin(rad) * r, ex, ey2, "v-arrow"));
+      const labels = ["0°", "45°", "90°", "135°", "180°", "225°", "270°", "315°"];
+      svg.appendChild(T(tx, ty + 3, labels[a / (360 / nVec)], "dim-text"));
+    }
+  });
+}
+
+// ================================================================
+// THREE.JS 3D VIEW
+// ================================================================
+let scene, camera, renderer, mesh;
+let isDragging = false, lastX = 0, lastY = 0;
+let rotX = 0.3, rotY = 0.5;
+
+function initThree() {
+  const canvas = document.getElementById("three-canvas");
+  const w = canvas.clientWidth || 400;
+  const h = canvas.clientHeight || 320;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x06090f);
+
+  camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
+  camera.position.set(400, 200, 300);
+  camera.lookAt(180, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0x334466, 0.8);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0x6699cc, 1.0);
+  dirLight.position.set(200, 300, 200);
+  scene.add(dirLight);
+  const pointLight = new THREE.PointLight(0x88aacc, 0.5);
+  pointLight.position.set(-100, -100, 200);
+  scene.add(pointLight);
+
+  // Build fuselage mesh
+  buildFuselageMesh();
+
+  // Grid helper
+  const grid = new THREE.GridHelper(500, 20, 0x112233, 0x0a1520);
+  grid.position.set(180, 0, 0);
+  scene.add(grid);
+
+  // Axes
+  const axLen = 200;
+  const axesMat = { red: 0xff4444, green: 0x44ff44, blue: 0x4488ff };
+  [
+    { from: [0,0,0], to: [axLen,0,0], col: axesMat.red },
+    { from: [0,0,0], to: [0,axLen,0], col: axesMat.green },
+    { from: [0,0,0], to: [0,0,axLen], col: axesMat.blue },
+  ].forEach(a => {
+    const mat = new THREE.LineBasicMaterial({ color: a.col });
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(...a.from), new THREE.Vector3(...a.to)
+    ]);
+    scene.add(new THREE.Line(geo, mat));
+  });
+
+  // Mouse controls
+  canvas.addEventListener("mousedown", e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+  window.addEventListener("mouseup", () => isDragging = false);
+  window.addEventListener("mousemove", e => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    rotY += dx * 0.005;
+    rotX += dy * 0.005;
+    rotX = Math.max(-1.5, Math.min(1.5, rotX));
+    lastX = e.clientX;
+    lastY = e.clientY;
+    updateCamera();
+  });
+  canvas.addEventListener("wheel", e => {
+    e.preventDefault();
+    camera.position.multiplyScalar(e.deltaY > 0 ? 1.1 : 0.9);
+    updateCamera();
+  });
+
+  updateCamera();
+  animate();
+}
+
+function updateCamera() {
+  const r = 500;
+  camera.position.x = r * Math.sin(rotY) * Math.cos(rotX);
+  camera.position.y = r * Math.sin(rotX);
+  camera.position.z = r * Math.cos(rotY) * Math.cos(rotX);
+  camera.lookAt(180, 0, 0);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+function buildFuselageMesh() {
+  if (mesh) scene.remove(mesh);
+
+  const points = [];
+  // Generate points along the fuselage surface using ogive + body + boat-tail
+  const segments = 60;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const x = t * TOTAL_LEN;
+    let r;
+    if (x <= NOSE_LEN) {
+      const dx = x - ogive_c;
+      r = Math.sqrt(Math.max(0, ogive_a * ogive_a - dx * dx));
+    } else if (x <= TAIL_START) {
+      r = MAX_R;
+    } else {
+      const bt = (x - TAIL_START) / (TOTAL_LEN - TAIL_START);
+      r = MAX_R - bt * (MAX_R - NOZZLE_R);
+    }
+    points.push({ x, r });
+  }
+
+  // Build lathe geometry
+  const lathePoints = [];
+  points.forEach(pt => {
+    lathePoints.push(new THREE.Vector2(pt.r, pt.x));
+  });
+
+  const geo = new THREE.LatheGeometry(lathePoints, 32);
+  geo.computeVertexNormals();
+
+  // Material
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x1a3a6a,
+    specular: 0x4466aa,
+    shininess: 60,
+    transparent: true,
+    opacity: 0.85,
+    side: THREE.DoubleSide,
+  });
+
+  mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.z = -Math.PI / 2; // orient along X axis
+  mesh.position.x = 0;
+  scene.add(mesh);
+
+  // Add wireframe overlay
+  const wireMat = new THREE.MeshBasicMaterial({ color: 0x224488, wireframe: true, transparent: true, opacity: 0.15 });
+  const wireMesh = new THREE.Mesh(geo.clone(), wireMat);
+  wireMesh.rotation.z = -Math.PI / 2;
+  scene.add(wireMesh);
+}
+
+// ================================================================
 // VECTOR TABLE
-// ─────────────────────────────────────────────
+// ================================================================
 function buildTable() {
-  const tbody = document.querySelector("#vecTable tbody");
+  const tbody = document.querySelector("#vec-table tbody");
   tbody.innerHTML = "";
 
-  const thead = document.createElement("thead");
-  thead.innerHTML = `<tr>
-    <th>Vector ID</th><th>X (mm)</th><th>Y (mm)</th><th>Z (mm)</th><th>Radius</th><th>Theta</th>
-  </tr>`;
-  tbody.appendChild(thead);
+  const vecPerSta = parseInt(document.getElementById("vec-select").value);
+  const nVecTotal = stations.length * vecPerSta;
+  document.getElementById("dV").textContent = nVecTotal;
 
-  // Station rows
-  stations.forEach(st => {
-    for (let a = 0; a < 360; a += 45) {
+  // Header
+  const header = document.createElement("tr");
+  ["STA", "X", "Y", "Z", "R", "θ", "type"].forEach(h => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    header.appendChild(th);
+  });
+  tbody.appendChild(header);
+
+  stations.forEach((st, si) => {
+    // Station header row
+    const hr = document.createElement("tr");
+    hr.className = "sta-hdr";
+    hr.innerHTML = `<td colspan="7">STA ${st.x.toFixed(1)} mm — r=${st.r.toFixed(3)} mm</td>`;
+    tbody.appendChild(hr);
+
+    for (let a = 0; a < 360; a += 360 / vecPerSta) {
       const theta = a * Math.PI / 180;
       const y = st.r * Math.cos(theta);
       const z = st.r * Math.sin(theta);
       const row = document.createElement("tr");
-      const staShort = st.label.replace("STA_", "");
       row.innerHTML = `
-        <td class="sta-hdr">${st.label}_${String(a).padStart(3,"0")}</td>
-        <td>${st.x.toFixed(1)}</td>
-        <td>${y.toFixed(4)}</td>
-        <td>${z.toFixed(4)}</td>
-        <td>${st.r.toFixed(1)}</td>
+        <td>${si}</td>
+        <td class="xcol">${st.x.toFixed(1)}</td>
+        <td class="ycol">${y.toFixed(4)}</td>
+        <td class="zcol">${z.toFixed(4)}</td>
+        <td class="rcol">${st.r.toFixed(3)}</td>
         <td>${a}°</td>
+        <td>surface</td>
       `;
       tbody.appendChild(row);
     }
   });
 
   // Attachment points
-  Object.entries(attachPoints).forEach(([name, ap]) => {
+  const attachRows = [
+    { name: "WING_ROOT_R", pos: [120, MAX_R, 0] },
+    { name: "WING_ROOT_L", pos: [120, -MAX_R, 0] },
+    { name: "H_STAB_ROOT_R", pos: [290, MAX_R, 0] },
+    { name: "H_STAB_ROOT_L", pos: [290, -MAX_R, 0] },
+    { name: "V_STAB_ROOT", pos: [290, 0, MAX_R] },
+    { name: "NOSE_PORT_TOP", pos: [30, 0, MAX_R] },
+    { name: "CANOPY_RAF", pos: [80, 0, MAX_R] },
+    { name: "INTAKE_LIP", pos: [360, NOZZLE_R, 0] },
+  ];
+  attachRows.forEach(ap => {
     const [px, py, pz] = ap.pos;
     const row = document.createElement("tr");
     row.className = "attach-row";
     row.innerHTML = `
-      <td>${name}</td>
-      <td>${px.toFixed(1)}</td>
-      <td>${py.toFixed(4)}</td>
-      <td>${pz.toFixed(4)}</td>
-      <td>${Math.sqrt(py*py+pz*pz).toFixed(4)}</td>
+      <td>${ap.name}</td>
+      <td class="xcol">${px.toFixed(1)}</td>
+      <td class="ycol">${py.toFixed(4)}</td>
+      <td class="zcol">${pz.toFixed(4)}</td>
+      <td class="rcol">${Math.sqrt(py*py+pz*pz).toFixed(3)}</td>
       <td>—</td>
+      <td>attach</td>
     `;
     tbody.appendChild(row);
   });
 }
 
-// ─────────────────────────────────────────────
-// EXPORT TO knowledge.tsx FORMAT
-// ─────────────────────────────────────────────
-function exportTSX() {
+// ================================================================
+// CONTROLS
+// ================================================================
+function toggleView(view) {
+  const btn = document.getElementById("btn-" + view);
+  const el = document.getElementById(view + "-svg") || document.getElementById(view === "cs" ? "cs-svg" : view + "-svg");
+  if (!el) return;
+  btn.classList.toggle("active");
+  el.style.display = btn.classList.contains("active") ? "block" : "none";
+}
+
+function drawAll() {
+  drawSideView();
+  drawTopView();
+  drawCrossSections();
+  buildTable();
+}
+
+// ================================================================
+// EXPORT
+// ================================================================
+function exportData() {
   const lines = [];
-  lines.push("// Fuselage Geometry Vectors — Auto-generated");
-  lines.push("// Origin: nose tip at x=0, y=0, z=0  |  1 unit = 1 mm");
+  lines.push("// fuselage_viewer.tsx — Generated from fuselage_viewer.html");
+  lines.push("// Physics: Mason Appendix tangent ogive + linear boat-tail");
+  lines.push("// Ogive a=" + ogive_a.toFixed(3) + "mm, c=" + ogive_c.toFixed(3) + "mm");
   lines.push("");
   lines.push("export const fuselageStations = [");
-
-  const attachLines = [];
-  const clLines = [];
-
-  stations.forEach(st => {
-    lines.push(`  { label: "${st.label}", x: ${st.x}, r: ${st.r} },`);
+  stations.forEach((st, i) => {
+    const comma = i < stations.length - 1 ? "," : "";
+    lines.push(`  { label: "STA_${st.x.toFixed(0).padStart(3,'0')}", x: ${st.x.toFixed(1)}, r: ${st.r.toFixed(4)} }${comma}`);
   });
   lines.push("];");
   lines.push("");
-  lines.push("// 56 circumferential vectors (7 stations × 8 pts @ 45°)");
-  lines.push("// y = r·cos(θ), z = r·sin(θ), θ from Y-axis → Z-axis");
-  lines.push("export const fuselageVectors: Record<string, [number,number,number]> = {");
-
-  stations.forEach(st => {
+  lines.push("export const surfaceVectors = {");
+  stations.forEach((st, si) => {
+    const vecs = [];
     for (let a = 0; a < 360; a += 45) {
       const theta = a * Math.PI / 180;
       const y = st.r * Math.cos(theta);
       const z = st.r * Math.sin(theta);
-      const id = `${st.label}_${String(a).padStart(3,"0")}`;
-      lines.push(`  "${id}": [${st.x.toFixed(1).padStart(5)}, ${y.toFixed(4).padStart(10)}, ${z.toFixed(4).padStart(10)}],`);
+      vecs.push(`"STA_${st.x.toFixed(0).padStart(3,'0')}_${a}": [${st.x.toFixed(1)}, ${y.toFixed(4)}, ${z.toFixed(4)}]`);
     }
+    lines.push("  " + vecs.join(",\n  ") + (si < stations.length - 1 ? "," : ""));
   });
-
   lines.push("};");
   lines.push("");
-  lines.push("// Centerline (nose→tail)");
-  lines.push("export const fuselageCenterline: [number,number,number][] = [");
-  centerline.forEach(pt => {
-    lines.push(`  [${pt[0].toFixed(1).padStart(5)}, ${pt[1].toFixed(4).padStart(10)}, ${pt[2].toFixed(4).padStart(10)}],`);
-  });
-  lines.push("];");
+  lines.push("export const FUSELAGE_GEOMETRY = {");
+  lines.push(`  totalLength_mm: ${TOTAL_LEN},`);
+  lines.push(`  maxDiameter_mm: ${MAX_R * 2},`);
+  lines.push(`  noseLength_mm: ${NOSE_LEN},`);
+  lines.push(`  boatTailStart_mm: ${TAIL_START},`);
+  lines.push(`  nozzleRadius_mm: ${NOZZLE_R},`);
+  lines.push(`  ogive_a_mm: ${ogive_a.toFixed(3)},`);
+  lines.push(`  ogive_c_mm: ${ogive_c.toFixed(3)},`);
+  lines.push(`  noseHalfAngle_deg: ${(Math.atan2(MAX_R, NOSE_LEN) * 180 / Math.PI).toFixed(2)},`);
+  lines.push(`  stationCount: ${stations.length},`);
+  lines.push("} as const;");
   lines.push("");
-  lines.push("// Key attachment points on fuselage surface");
-  lines.push("export const fuselageAttachPoints: Record<string, [number,number,number]> = {");
-
-  Object.entries(attachPoints).forEach(([name, ap]) => {
-    const [px, py, pz] = ap.pos;
-    lines.push(`  "${name.padEnd(16)}": [${px.toFixed(1).padStart(5)}, ${py.toFixed(4).padStart(10)}, ${pz.toFixed(4).padStart(10)}],`);
+  lines.push("export const attachmentPoints = {");
+  const ap2 = [
+    ["WING_ROOT_R", 120, MAX_R, 0],
+    ["WING_ROOT_L", 120, -MAX_R, 0],
+    ["H_STAB_ROOT_R", 290, MAX_R, 0],
+    ["H_STAB_ROOT_L", 290, -MAX_R, 0],
+    ["V_STAB_ROOT", 290, 0, MAX_R],
+    ["NOSE_PORT_TOP", 30, 0, MAX_R],
+    ["CANOPY_RAF", 80, 0, MAX_R],
+    ["INTAKE_LIP", 360, NOZZLE_R, 0],
+  ];
+  ap2.forEach(([name, px, py, pz], i) => {
+    lines.push(`  ${name}: [${px}, ${py}, ${pz}]${i < ap2.length - 1 ? "," : ""}`);
   });
   lines.push("};");
   lines.push("");
   lines.push("export default fuselageStations;");
 
   const tsx = lines.join("\n");
-
-  // Download
-  const blob = new Blob([tsx], {type: "text/typescript"});
+  const blob = new Blob([tsx], { type: "text/plain" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "knowledge.tsx";
+  a.download = "fuselage_geometry.tsx";
   a.click();
 
-  // Also show in textarea
-  const ta = document.createElement("textarea");
-  ta.style.cssText = "position:fixed;bottom:10px;left:10px;width:600px;height:300px;background:#0a0e1a;color:#4af;border:1px solid #2a4a6a;font-size:10px;z-index:999;border-radius:6px;";
-  ta.value = tsx;
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
+  // Also update info
+  document.getElementById("dN").textContent = stations.length;
+  document.getElementById("dL").textContent = TOTAL_LEN;
+  document.getElementById("dD").textContent = MAX_R * 2;
+  document.getElementById("dNose").textContent = "Ogive (Mason)";
 }
 
-function toggleTable() {
-  const panel = document.querySelector(".table-panel");
-  panel.style.display = panel.style.display === "none" ? "block" : "none";
-}
-
-// ─────────────────────────────────────────────
+// ================================================================
 // INIT
-// ─────────────────────────────────────────────
-buildTopView();
-buildSideView();
-buildIsoView();
-buildTable();
+// ================================================================
+window.addEventListener("load", () => {
+  document.getElementById("dN").textContent = stations.length;
+  drawAll();
+  initThree();
+});
 </script>
 </body>
 </html>
