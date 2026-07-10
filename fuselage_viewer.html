@@ -284,9 +284,15 @@ const NOSE_LEN = 40; // mm
 const TAIL_START = 330; // mm (boat-tail begins)
 const NOZZLE_R = 7; // mm
 
-// Compute ogive parameters so curve passes through (nose_len, MAX_R)
-const ogive_a = (NOSE_LEN * NOSE_LEN + MAX_R * MAX_R) / (2 * MAX_R); // ~62.2 mm
-const ogive_c = ogive_a - MAX_R;                                     // ~44.2 mm from tip
+// ================================================================
+// Ogive formula (Mason Appendix tangent ogive):
+//   r(x) = sqrt(R_body^2 - (L_nose - x)^2)  for x in [0, L_nose]
+// This passes through (0,0) and (L_nose, R_body) with smooth tangent.
+// Boat-tail: linear taper from body to nozzle.
+// ================================================================
+
+const ogive_L = NOSE_LEN;    // 40 mm
+const ogive_R = MAX_R;       // 18 mm
 
 // Generate 30 stations with physics-accurate radii
 function generateStations(n = 30) {
@@ -295,9 +301,10 @@ function generateStations(n = 30) {
     const x = (i / n) * TOTAL_LEN;
     let r;
     if (x <= NOSE_LEN) {
-      // Ogive: r = sqrt(a² - (x - c)²)
-      const dx = x - ogive_c;
-      r = Math.sqrt(Math.max(0, ogive_a * ogive_a - dx * dx));
+      // Tangent (secant) ogive: r(x) = sqrt(R^2 - (L - x)^2)
+      // Geometric center at x = L_nose on axis; passes through origin and shoulder
+      const dx = ogive_L - x;
+      r = Math.sqrt(Math.max(0, ogive_R * ogive_R - dx * dx));
     } else if (x <= TAIL_START) {
       // Cylindrical body
       r = MAX_R;
@@ -306,6 +313,8 @@ function generateStations(n = 30) {
       const t = (x - TAIL_START) / (TOTAL_LEN - TAIL_START);
       r = MAX_R - t * (MAX_R - NOZZLE_R);
     }
+    // Clamp very small radii to 0 at the nose tip
+    if (x < 0.5) r = 0;
     stations.push({ x: Math.round(x * 10) / 10, r: Math.round(r * 100) / 100 });
   }
   return stations;
@@ -664,14 +673,16 @@ function buildFuselageMesh() {
 
   const points = [];
   // Generate points along the fuselage surface using ogive + body + boat-tail
-  const segments = 60;
+  const segments = 80;
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const x = t * TOTAL_LEN;
     let r;
     if (x <= NOSE_LEN) {
-      const dx = x - ogive_c;
-      r = Math.sqrt(Math.max(0, ogive_a * ogive_a - dx * dx));
+      // Tangent ogive: r(x) = sqrt(R^2 - (L - x)^2)
+      const dx = ogive_L - x;
+      r = Math.sqrt(Math.max(0, ogive_R * ogive_R - dx * dx));
+      if (x < 0.5) r = 0;
     } else if (x <= TAIL_START) {
       r = MAX_R;
     } else {
