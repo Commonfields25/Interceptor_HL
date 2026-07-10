@@ -1,9 +1,15 @@
 {
   "_meta": {
     "project": "Interceptor_HL",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "author": "Commonfields25",
-    "description": "Aerodynamic knowledge base for Interceptor_HL fixed-wing drone"
+    "description": "Aerodynamic knowledge base for Interceptor_HL fixed-wing drone",
+    "fixes": [
+      "MAC corrected: 29.05mm \u2192 71.9mm (Raymer formula verified)",
+      "area_mm2: half-wing \u2192 total both wings",
+      "aspectRatio recalculated with correct total area",
+      "rootChord: 90mm (produces MAC=71.9mm per blueprint)"
+    ]
   },
   "wing": {
     "project": "Interceptor_HL",
@@ -13,15 +19,15 @@
     "sweep_deg": 5.0,
     "dihedral_deg": 0.0,
     "taperRatio": 0.5556,
-    "MAC_mm": 29.05,
+    "MAC_mm": 71.9,
     "MAC_LE_fromRoot_mm": 104.05,
-    "area_mm2": 32200.0,
-    "aspectRatio": 6.57,
+    "area_mm2": 64400,
+    "aspectRatio": 3.29,
     "airfoil": {
       "name": "Clark Y",
       "t/c": 0.12,
       "Cl_max": 1.5,
-      "Cl_alpha_per_rad": 6.283185307179586,
+      "Cl_alpha_per_rad": 6.28318,
       "Cd0": 0.006,
       "alpha_stall_deg": 14
     }
@@ -133,9 +139,11 @@
     "dynamicPressure": "q = \u00bd\u03c1v\u00b2",
     "requiredLiftCL": "CL_req = 2W / (\u03c1v\u00b2S)",
     "stallSpeed": "V_stall = \u221a( 2W / (\u03c1S C_Lmax) )",
-    "MAC": "MAC = (2/3)c_r(1-\u03bb+\u03bb\u00b2)/(1+\u03bb)  where \u03bb=c_t/c_r",
-    "AR": "AR = b\u00b2/S",
+    "MAC": "MAC = (2/3)\u00b7Cr\u00b7(1+\u03bb+\u03bb\u00b2)/(1+\u03bb)",
+    "AR": "AR = b\u00b2/S_total",
     "CL_alpha_per_deg": "\u2248 0.11/deg for typical cambered airfoil",
-    "e_Oswald_est": "e \u2248 1.78(1 - 0.045 AR^0.68) - 0.64 for wing alone"
+    "e_Oswald_est": "e \u2248 1.78(1 - 0.045 AR^0.68) - 0.64 for wing alone",
+    "y_MAC": "y_MAC = (b/6)\u00b7(1+2\u03bb)/(1+\u03bb)",
+    "wingArea": "S = b\u00b7(Cr+Ct)  [total both wings]"
   }
 }
