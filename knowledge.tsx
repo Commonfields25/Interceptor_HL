@@ -1,185 +1,116 @@
-// Interceptor_HL — Fuselage Geometry Data
-// Origin: nose tip at x=0, y=0, z=0 | 1 unit = 1 mm
-// Physics: Mason Appendix cosine ogive + linear boat-tail
-// Cosine ogive: r(x) = R_body * (1 - cos(pi*x/(2*L_nose)))
-//   → vertical tangent at x=0, smooth horizontal transition at x=L_nose
-// Boat-tail: linear taper from STA 330 (r=18) to STA 360 (r=7)
+import React from 'react';
 
-export const FUSELAGE_GEOMETRY = {
-  totalLength_mm: 360,
-  maxDiameter_mm: 36,           // Ø 36 mm = r_body × 2
-  bodyRadius_mm: 18,
-  noseLength_mm: 40,            // ogive region
-  boatTailStart_mm: 330,        // taper begins
-  nozzleRadius_mm: 7,
-  ogiveFormula: "r(x) = R * (1 - cos(pi*x/(2L)))",
-  noseHalfAngle_deg: 24.23,     // atan(R_body / L_nose)
-  boatTailHalfAngle_deg: 20.49, // atan((R_body - R_nozzle) / L_tail)
-  stationCount: 30,
-  vecPerStation: 12,            // 30° increments
-  scale_px_per_mm: 2.5,
-} as const;
+export interface GeometryData {
+  L: number;
+  maxDiameter: number;
+  noseLen: number;
+  tailStart: number;
+  nozzleR: number;
+  stations: Array<{ x: number; r: number }>;
+  wing: {
+    rootChord: number;
+    tipChord: number;
+    halfSpan: number;
+    sweepLE: number;
+    dihedral: number;
+    thicknessRoot: number;
+    thicknessTip: number;
+    posRootX: number;
+    taper: number;
+    span: number;
+    area: number;
+    AR: number;
+    qcSweep: number;
+  };
+  vectors: {
+    nPerStation: number;
+    angleStep: number;
+  };
+}
 
-// 30 physics-based stations (cosine ogive → cylindrical body → linear boat-tail)
-export const fuselageStations = [
-  { label: "STA_000", x:   0.0, r:  0.0000 },
-  { label: "STA_012", x:  12.0, r:  1.9619 },
-  { label: "STA_024", x:  24.0, r:  7.4199 },
-  { label: "STA_036", x:  36.0, r: 15.1842 },
-  { label: "STA_048", x:  48.0, r: 18.0000 },  // ogive tangent point
-  { label: "STA_060", x:  60.0, r: 18.0000 },
-  { label: "STA_072", x:  72.0, r: 18.0000 },
-  { label: "STA_084", x:  84.0, r: 18.0000 },
-  { label: "STA_096", x:  96.0, r: 18.0000 },
-  { label: "STA_108", x: 108.0, r: 18.0000 },
-  { label: "STA_120", x: 120.0, r: 18.0000 },  // wing root attachment
-  { label: "STA_132", x: 132.0, r: 18.0000 },
-  { label: "STA_144", x: 144.0, r: 18.0000 },
-  { label: "STA_156", x: 156.0, r: 18.0000 },
-  { label: "STA_168", x: 168.0, r: 18.0000 },
-  { label: "STA_180", x: 180.0, r: 18.0000 },
-  { label: "STA_192", x: 192.0, r: 18.0000 },
-  { label: "STA_204", x: 204.0, r: 18.0000 },
-  { label: "STA_216", x: 216.0, r: 18.0000 },
-  { label: "STA_228", x: 228.0, r: 18.0000 },
-  { label: "STA_240", x: 240.0, r: 18.0000 },
-  { label: "STA_252", x: 252.0, r: 18.0000 },
-  { label: "STA_264", x: 264.0, r: 18.0000 },
-  { label: "STA_276", x: 276.0, r: 18.0000 },
-  { label: "STA_288", x: 288.0, r: 18.0000 },
-  { label: "STA_300", x: 300.0, r: 18.0000 },
-  { label: "STA_312", x: 312.0, r: 18.0000 },
-  { label: "STA_324", x: 324.0, r: 18.0000 },
-  { label: "STA_336", x: 336.0, r: 15.8000 },
-  { label: "STA_348", x: 348.0, r: 11.4000 },
-  { label: "STA_360", x: 360.0, r:  7.0000 },  // nozzle exit
-];
+export const geometry: GeometryData = {
+  L: 360,          // mm — total fuselage length
+  maxDiameter: 36, // mm — max fuselage diameter (Ø)
+  noseLen: 40,      // mm — ogive nose length
+  tailStart: 330,   // mm — boat-tail begins
+  nozzleR: 7,      // mm — nozzle exit radius
 
-// Surface vectors: 12 per station (30° increments) — key stations shown
-export const surfaceVectors: Record<string, [number, number, number]> = {
-  // STA_000 (tip — all vectors at origin)
-  "STA_000_000": [  0.0,   0.0000,   0.0000],
-  "STA_000_030": [  0.0,   0.0000,   0.0000],
-  "STA_000_060": [  0.0,   0.0000,   0.0000],
-  "STA_000_090": [  0.0,   0.0000,   0.0000],
-  "STA_000_120": [  0.0,   0.0000,   0.0000],
-  "STA_000_150": [  0.0,   0.0000,   0.0000],
-  "STA_000_180": [  0.0,   0.0000,   0.0000],
-  "STA_000_210": [  0.0,   0.0000,   0.0000],
-  "STA_000_240": [  0.0,   0.0000,   0.0000],
-  "STA_000_270": [  0.0,   0.0000,   0.0000],
-  "STA_000_300": [  0.0,   0.0000,   0.0000],
-  "STA_000_330": [  0.0,   0.0000,   0.0000],
-  // STA_012 — r=1.9619 (cosine ogive)
-  "STA_012_000": [ 12.0,   1.9619,   0.0000],
-  "STA_012_030": [ 12.0,   1.6991,   0.9809],
-  "STA_012_060": [ 12.0,   0.9810,   1.6991],
-  "STA_012_090": [ 12.0,   0.0000,   1.9619],
-  "STA_012_120": [ 12.0,  -0.9809,   1.6991],
-  "STA_012_150": [ 12.0,  -1.6991,   0.9809],
-  "STA_012_180": [ 12.0,  -1.9619,   0.0000],
-  "STA_012_210": [ 12.0,  -1.6991,  -0.9810],
-  "STA_012_240": [ 12.0,  -0.9810,  -1.6991],
-  "STA_012_270": [ 12.0,   0.0000,  -1.9619],
-  "STA_012_300": [ 12.0,   0.9810,  -1.6991],
-  "STA_012_330": [ 12.0,   1.6991,  -0.9810],
-  // STA_024 — r=7.4199
-  "STA_024_000": [ 24.0,   7.4199,   0.0000],
-  "STA_024_030": [ 24.0,   6.4258,   3.7099],
-  "STA_024_060": [ 24.0,   3.7100,   6.4258],
-  "STA_024_090": [ 24.0,   0.0000,   7.4199],
-  "STA_024_120": [ 24.0,  -3.7099,   6.4258],
-  "STA_024_150": [ 24.0,  -6.4258,   3.7099],
-  "STA_024_180": [ 24.0,  -7.4199,   0.0000],
-  "STA_024_210": [ 24.0,  -6.4258,  -3.7100],
-  "STA_024_240": [ 24.0,  -3.7100,  -6.4258],
-  "STA_024_270": [ 24.0,   0.0000,  -7.4199],
-  "STA_024_300": [ 24.0,   3.7100,  -6.4258],
-  "STA_024_330": [ 24.0,   6.4258,  -3.7100],
-  // STA_036 — r=15.1842
-  "STA_036_000": [ 36.0,  15.1842,   0.0000],
-  "STA_036_030": [ 36.0,  13.1499,   7.5921],
-  "STA_036_060": [ 36.0,   7.5921,  13.1499],
-  "STA_036_090": [ 36.0,   0.0000,  15.1842],
-  "STA_036_120": [ 36.0,  -7.5921,  13.1499],
-  "STA_036_150": [ 36.0, -13.1499,   7.5921],
-  "STA_036_180": [ 36.0, -15.1842,   0.0000],
-  "STA_036_210": [ 36.0, -13.1499,  -7.5921],
-  "STA_036_240": [ 36.0,  -7.5921, -13.1499],
-  "STA_036_270": [ 36.0,   0.0000, -15.1842],
-  "STA_036_300": [ 36.0,   7.5921, -13.1499],
-  "STA_036_330": [ 36.0,  13.1499,  -7.5921],
-  // STA_120 — r=18.0000 (wing root attachment)
-  "STA_120_000": [120.0,  18.0000,   0.0000],
-  "STA_120_030": [120.0,  15.5885,   9.0000],
-  "STA_120_060": [120.0,   9.0000,  15.5885],
-  "STA_120_090": [120.0,   0.0000,  18.0000],
-  "STA_120_120": [120.0,  -9.0000,  15.5885],
-  "STA_120_150": [120.0, -15.5885,   9.0000],
-  "STA_120_180": [120.0, -18.0000,   0.0000],
-  "STA_120_210": [120.0, -15.5885,  -9.0000],
-  "STA_120_240": [120.0,  -9.0000, -15.5885],
-  "STA_120_270": [120.0,   0.0000, -18.0000],
-  "STA_120_300": [120.0,   9.0000, -15.5885],
-  "STA_120_330": [120.0,  15.5885,  -9.0000],
-  // STA_240 — r=18.0000
-  "STA_240_000": [240.0,  18.0000,   0.0000],
-  "STA_240_030": [240.0,  15.5885,   9.0000],
-  "STA_240_060": [240.0,   9.0000,  15.5885],
-  "STA_240_090": [240.0,   0.0000,  18.0000],
-  "STA_240_120": [240.0,  -9.0000,  15.5885],
-  "STA_240_150": [240.0, -15.5885,   9.0000],
-  "STA_240_180": [240.0, -18.0000,   0.0000],
-  "STA_240_210": [240.0, -15.5885,  -9.0000],
-  "STA_240_240": [240.0,  -9.0000, -15.5885],
-  "STA_240_270": [240.0,   0.0000, -18.0000],
-  "STA_240_300": [240.0,   9.0000, -15.5885],
-  "STA_240_330": [240.0,  15.5885,  -9.0000],
-  // STA_360 — r=7.0000 (nozzle exit)
-  "STA_360_000": [360.0,   7.0000,   0.0000],
-  "STA_360_030": [360.0,   6.0622,   3.5000],
-  "STA_360_060": [360.0,   3.5000,   6.0622],
-  "STA_360_090": [360.0,   0.0000,   7.0000],
-  "STA_360_120": [360.0,  -3.5000,   6.0622],
-  "STA_360_150": [360.0,  -6.0622,   3.5000],
-  "STA_360_180": [360.0,  -7.0000,   0.0000],
-  "STA_360_210": [360.0,  -6.0622,  -3.5000],
-  "STA_360_240": [360.0,  -3.5000,  -6.0622],
-  "STA_360_270": [360.0,   0.0000,  -7.0000],
-  "STA_360_300": [360.0,   3.5000,  -6.0622],
-  "STA_360_330": [360.0,   6.0622,  -3.5000],
+  stations: [
+    { x: 0,   r: 0.00 }, { x: 12,  r: 11.83 }, { x: 24,  r: 15.87 },
+    { x: 36,  r: 17.73 }, { x: 40,  r: 18.00 }, { x: 48,  r: 18.00 },
+    { x: 60,  r: 18.00 }, { x: 84,  r: 18.00 }, { x: 108, r: 18.00 },
+    { x: 120, r: 18.00 }, { x: 132, r: 18.00 }, { x: 144, r: 18.00 },
+    { x: 156, r: 18.00 }, { x: 168, r: 18.00 }, { x: 180, r: 18.00 },
+    { x: 192, r: 18.00 }, { x: 204, r: 18.00 }, { x: 216, r: 18.00 },
+    { x: 228, r: 18.00 }, { x: 240, r: 18.00 }, { x: 252, r: 18.00 },
+    { x: 264, r: 18.00 }, { x: 276, r: 18.00 }, { x: 288, r: 18.00 },
+    { x: 300, r: 18.00 }, { x: 312, r: 18.00 }, { x: 324, r: 17.73 },
+    { x: 330, r: 17.36 }, { x: 342, r: 14.36 }, { x: 360, r: 7.00 },
+  ],
+
+  // ── MAIN WING DATA ──
+  wing: {
+    rootChord:   60,   // mm — chord at fuselage attachment
+    tipChord:    28,   // mm — chord at wing tip
+    halfSpan:     85,   // mm — root to tip (one side)
+    sweepLE:      18,   // degrees — leading edge sweep angle
+    dihedral:     5.5,  // degrees — tip dihedral (tip up)
+    thicknessRoot: 0.12, // t/c ratio at root (NACA 12%)
+    thicknessTip:  0.10, // t/c ratio at tip (NACA 10%)
+    posRootX:     105,  // mm FS — root leading edge position
+
+    // Derived
+    taper:   0.467,     // λ = Ct/Cr = 28/60
+    span:    170,       // b = 2 × halfSpan = 170 mm
+    area:    0.00748,   // m² — trapezoidal area: ½(Cr+Ct)×b
+    AR:      5.67,      // Aspect Ratio: b²/S ≈ 170²/5098
+    qcSweep: 12,        // degrees — quarter-chord sweep (design value)
+
+    // NACA 4-digit thickness: y/c = 5·tc·(0.2969√t − 0.126t − 0.3516t² + 0.2843t³ − 0.1015t⁴)
+    // Airfoil cross-section: parametric in XY plane at each span station
+  },
+
+  vectors: {
+    nPerStation: 12,
+    angleStep: 30,   // degrees — 12 vectors at 30° intervals
+  },
 };
 
-// Centerline (nose → tail, 30 points)
-export const centerline: [number, number, number][] = [
-  [  0.0,  0.0000,  0.0000], [ 12.0,  0.0000,  0.0000],
-  [ 24.0,  0.0000,  0.0000], [ 36.0,  0.0000,  0.0000],
-  [ 48.0,  0.0000,  0.0000], [ 60.0,  0.0000,  0.0000],
-  [ 72.0,  0.0000,  0.0000], [ 84.0,  0.0000,  0.0000],
-  [ 96.0,  0.0000,  0.0000], [108.0,  0.0000,  0.0000],
-  [120.0,  0.0000,  0.0000], [132.0,  0.0000,  0.0000],
-  [144.0,  0.0000,  0.0000], [156.0,  0.0000,  0.0000],
-  [168.0,  0.0000,  0.0000], [180.0,  0.0000,  0.0000],
-  [192.0,  0.0000,  0.0000], [204.0,  0.0000,  0.0000],
-  [216.0,  0.0000,  0.0000], [228.0,  0.0000,  0.0000],
-  [240.0,  0.0000,  0.0000], [252.0,  0.0000,  0.0000],
-  [264.0,  0.0000,  0.0000], [276.0,  0.0000,  0.0000],
-  [288.0,  0.0000,  0.0000], [300.0,  0.0000,  0.0000],
-  [312.0,  0.0000,  0.0000], [324.0,  0.0000,  0.0000],
-  [336.0,  0.0000,  0.0000], [348.0,  0.0000,  0.0000],
-  [360.0,  0.0000,  0.0000],
-];
-
-// Key attachment points on fuselage surface
-export const attachmentPoints: Record<string, [number, number, number]> = {
-  "WING_ROOT_R":   [120.0,  18.0000,   0.0000],
-  "WING_ROOT_L":   [120.0, -18.0000,   0.0000],
-  "H_STAB_ROOT_R": [290.0,  18.0000,   0.0000],
-  "H_STAB_ROOT_L": [290.0, -18.0000,   0.0000],
-  "V_STAB_ROOT":   [290.0,   0.0000,  18.0000],
-  "NOSE_PORT_TOP": [ 30.0,   0.0000,  18.0000],
-  "INTAKE_LIP":    [360.0,   7.0000,   0.0000],
-  "CANOPY_RAF":    [ 80.0,   0.0000,  18.0000],
+export const aerodynamicConstants = {
+  rho: 1.225,        // kg/m³ — air density at sea level
+  nu: 1.5e-5,        // m²/s — kinematic viscosity
+  gamma: 1.4,        // ratio of specific heats
+  R: 287,            // J/(kg·K) — gas constant
 };
 
-export default fuselageStations;
+export const flightConditions = {
+  vCruise: 40,       // m/s — estimated cruise speed
+  alphaMax: 15,      // degrees — max CL before stall
+  clAlpha: 0.1,      // per degree — lift curve slope (thin airfoil)
+};
+
+export function getFuselageSection(x: number): number {
+  // Returns radius at fuselage station x (mm)
+  // Ogive: r(x) = √(R² − (L_nose − x)²) for 0 ≤ x ≤ L_nose
+  // Body: r = R for L_nose < x < TAIL_START
+  // Boat-tail: linear taper for x ≥ TAIL_START
+  if (x <= geometry.noseLen) {
+    const dx = geometry.noseLen - x;
+    return Math.sqrt(Math.max(0, (geometry.maxDiameter / 2) ** 2 - dx ** 2));
+  } else if (x <= geometry.tailStart) {
+    return geometry.maxDiameter / 2;
+  } else {
+    const t = (x - geometry.tailStart) / (geometry.L - geometry.tailStart);
+    return geometry.maxDiameter / 2 - t * (geometry.maxDiameter / 2 - geometry.nozzleR);
+  }
+}
+
+export function getWingChordAt(spanFrac: number): number {
+  // spanFrac: 0 = root, 1 = tip
+  return geometry.wing.rootChord - spanFrac * (geometry.wing.rootChord - geometry.wing.tipChord);
+}
+
+export function getWingArea(): number {
+  const { rootChord, tipChord, halfSpan } = geometry.wing;
+  return 0.5 * (rootChord + tipChord) * (halfSpan * 2) * 1e-6; // m²
+}
