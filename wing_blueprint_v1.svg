@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="1020" style="background:#f7f9fc">
+  <title>Interceptor_HL — Wing Blueprint V1</title>
+  <line x1="50" y1="50" x2="50" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="100" y1="50" x2="100" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="150" y1="50" x2="150" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="200" y1="50" x2="200" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="250" y1="50" x2="250" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="300" y1="50" x2="300" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="350" y1="50" x2="350" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="400" y1="50" x2="400" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="450" y1="50" x2="450" y2="970" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="50" x2="410" y2="50" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="100" x2="410" y2="100" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="150" x2="410" y2="150" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="200" x2="410" y2="200" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="250" x2="410" y2="250" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="300" x2="410" y2="300" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="350" x2="410" y2="350" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="400" x2="410" y2="400" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="450" x2="410" y2="450" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="500" x2="410" y2="500" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="550" x2="410" y2="550" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="600" x2="410" y2="600" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="650" x2="410" y2="650" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="700" x2="410" y2="700" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="750" x2="410" y2="750" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="800" x2="410" y2="800" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="850" x2="410" y2="850" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="900" x2="410" y2="900" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="950" x2="410" y2="950" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="1000" x2="410" y2="1000" stroke="#eee" stroke-width="0.5"/>
+  <line x1="50" y1="510.0" x2="410" y2="510.0" stroke="#ccc" stroke-width="1" stroke-dasharray="6,3"/>
+  <polygon points="230.0,50 50.0,50 30.489570443850084,970.0 130.48957044385008,970.0" fill="#ddeeff" stroke="#1a3a5c" stroke-width="2"/>
+  <line x1="58.7" y1="150.0" x2="230.1" y2="150.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="67.5" y1="250.0" x2="230.1" y2="250.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="76.2" y1="350.0" x2="230.2" y2="350.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="85.0" y1="450.0" x2="230.2" y2="450.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="93.7" y1="550.0" x2="230.3" y2="550.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="102.5" y1="650.0" x2="230.3" y2="650.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="111.2" y1="750.0" x2="230.4" y2="750.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="120.0" y1="850.0" x2="230.4" y2="850.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="128.7" y1="950.0" x2="230.5" y2="950.0" stroke="#4a90d9" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <line x1="185.0" y1="50.0" x2="185.0" y2="970.0" stroke="#f39c12" stroke-width="1.5" stroke-dasharray="8,3"/>
+  <rect x="258.1" y="254.1" width="58.1" height="8" fill="#e74c3c" opacity="0.6" rx="2"/>
+  <rect x="50" y="50" width="360" height="28" fill="#1a3a5c" rx="4"/>
+  <text x="144.4" y="146.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">50mm</text>
+  <text x="148.8" y="246.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">100mm</text>
+  <text x="153.2" y="346.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">150mm</text>
+  <text x="157.6" y="446.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">200mm</text>
+  <text x="162.0" y="546.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">250mm</text>
+  <text x="166.4" y="646.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">300mm</text>
+  <text x="170.8" y="746.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">350mm</text>
+  <text x="175.2" y="846.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">400mm</text>
+  <text x="179.6" y="946.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#4a90d9">450mm</text>
+  <text x="287.1" y="246.1" text-anchor="middle" font-family="monospace" font-size="10" fill="#e74c3c">MAC=29.0mm</text>
+  <text x="185.0" y="984.0" text-anchor="middle" font-family="monospace" font-size="9" fill="#f39c12">spar 25%</text>
+  <text x="140.0" y="42.0" text-anchor="middle" font-family="monospace" font-size="12" fill="#1a3a5c" font-weight="bold">c_r = 90mm</text>
+  <text x="180.5" y="986.0" text-anchor="middle" font-family="monospace" font-size="12" fill="#1a3a5c" font-weight="bold">c_t = 50mm</text>
+  <text x="64.0" y="510.0" text-anchor="middle" font-family="monospace" font-size="12" fill="#1a3a5c" transform="rotate(-90,64.0,510.0)" font-weight="bold">b = 460mm</text>
+  <text x="50" y="1008.0" font-family="monospace" font-size="11" fill="#555">λ=0.556  |  AR=6.57  |  S=32200mm²  |  sweep=5.0°  |  MAC=29.0mm  |  MAC@x=104.0mm</text>
+  <text x="230.0" y="69.0" text-anchor="middle" font-family="monospace" font-size="13" fill="white" font-weight="bold">INTERCEPTOR_HL — Wing Blueprint V1</text>
+</svg>

@@ -1,0 +1,141 @@
+{
+  "_meta": {
+    "project": "Interceptor_HL",
+    "version": "1.0.0",
+    "author": "Commonfields25",
+    "description": "Aerodynamic knowledge base for Interceptor_HL fixed-wing drone"
+  },
+  "wing": {
+    "project": "Interceptor_HL",
+    "span_mm": 460,
+    "rootChord_mm": 90,
+    "tipChord_mm": 50,
+    "sweep_deg": 5.0,
+    "dihedral_deg": 0.0,
+    "taperRatio": 0.5556,
+    "MAC_mm": 29.05,
+    "MAC_LE_fromRoot_mm": 104.05,
+    "area_mm2": 32200.0,
+    "aspectRatio": 6.57,
+    "airfoil": {
+      "name": "Clark Y",
+      "t/c": 0.12,
+      "Cl_max": 1.5,
+      "Cl_alpha_per_rad": 6.283185307179586,
+      "Cd0": 0.006,
+      "alpha_stall_deg": 14
+    }
+  },
+  "fuselage": {
+    "length_mm": 360,
+    "maxDiameter_mm": 36,
+    "noseType": "conical",
+    "noseLength_mm": 40,
+    "noseHalfAngle_deg": 24.23,
+    "stations": {
+      "FUS_STA_000": {
+        "desc": "Nose tip",
+        "x_mm": 0
+      },
+      "FUS_STA_040": {
+        "desc": "Nose shoulder",
+        "x_mm": 40
+      },
+      "FUS_STA_070": {
+        "desc": "Canopy leading edge",
+        "x_mm": 70
+      },
+      "FUS_STA_110": {
+        "desc": "FC bay forward",
+        "x_mm": 110,
+        "payload_bay": "FC"
+      },
+      "FUS_STA_150": {
+        "desc": "FC bay aft",
+        "x_mm": 150
+      },
+      "FUS_STA_180": {
+        "desc": "Battery bay forward",
+        "x_mm": 180,
+        "payload_bay": "Battery"
+      },
+      "FUS_STA_230": {
+        "desc": "Battery bay aft",
+        "x_mm": 230
+      },
+      "FUS_STA_260": {
+        "desc": "ESC bay forward",
+        "x_mm": 260,
+        "payload_bay": "ESC"
+      },
+      "FUS_STA_290": {
+        "desc": "ESC bay aft",
+        "x_mm": 290
+      },
+      "FUS_STA_330": {
+        "desc": "Motor mount front",
+        "x_mm": 330
+      },
+      "FUS_STA_360": {
+        "desc": "Tail face",
+        "x_mm": 360
+      }
+    }
+  },
+  "materials": [
+    {
+      "name": "EPS foam",
+      "density_g_cm3": 0.033,
+      "E_GPa": 0.001,
+      "sigma_yield_MPa": 0.15
+    },
+    {
+      "name": "EPP foam",
+      "density_g_cm3": 0.04,
+      "E_GPa": 0.002,
+      "sigma_yield_MPa": 0.2
+    },
+    {
+      "name": "CNC foam",
+      "density_g_cm3": 0.035,
+      "E_GPa": 0.001,
+      "sigma_yield_MPa": 0.18
+    },
+    {
+      "name": "Balsa wood",
+      "density_g_cm3": 0.13,
+      "E_GPa": 12.0,
+      "sigma_yield_MPa": 50
+    },
+    {
+      "name": "Birch ply 1mm",
+      "density_g_cm3": 0.6,
+      "E_GPa": 12.6,
+      "sigma_yield_MPa": 40
+    },
+    {
+      "name": "Fiberglass",
+      "density_g_cm3": 1.6,
+      "E_GPa": 35.0,
+      "sigma_yield_MPa": 350
+    },
+    {
+      "name": "Carbon UD",
+      "density_g_cm3": 1.5,
+      "E_GPa": 135.0,
+      "sigma_yield_MPa": 1600
+    }
+  ],
+  "formulas": {
+    "liftCoefficient": "CL = C_L_alpha \u00d7 (\u03b1 - \u03b1_stall)",
+    "inducedDrag": "C_Di = CL\u00b2 / (\u03c0 \u00d7 e \u00d7 AR)",
+    "totalDrag": "C_D = C_D0 + C_Di",
+    "dynamicPressure": "q = \u00bd\u03c1v\u00b2",
+    "requiredLiftCL": "CL_req = 2W / (\u03c1v\u00b2S)",
+    "stallSpeed": "V_stall = \u221a( 2W / (\u03c1S C_Lmax) )",
+    "MAC": "MAC = (2/3)c_r(1-\u03bb+\u03bb\u00b2)/(1+\u03bb)  where \u03bb=c_t/c_r",
+    "AR": "AR = b\u00b2/S",
+    "CL_alpha_per_deg": "\u2248 0.11/deg for typical cambered airfoil",
+    "e_Oswald_est": "e \u2248 1.78(1 - 0.045 AR^0.68) - 0.64 for wing alone"
+  }
+}
