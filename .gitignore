@@ -1,0 +1,62 @@
+# CAD / 3D modeling
+*.step
+*.stp
+*.iges
+*.igs
+*.stl
+*.obj
+*.3dm
+*.prt
+*.asm
+*.drw
+*.dwg
+*.dxf
+*.f3d
+*.f3z
+*.ipj
+
+# Onshape / Fusion360 cloud files (don't commit the database)
+*.onshape
+*.fusion360
+
+# FreeCAD
+*.fcstd
+*.fcstd1
+*.fcstd2
+
+# Python / Scripts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# PDF generated from CAD
+plots/
+exported/
+
+# Simulation outputs
+sim_results/
+*.csv (only if simulation output — keep design CSVs)
