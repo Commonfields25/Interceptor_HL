@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Interceptor_HL — Fuselage Geometry Viewer</title>
+<title>Interceptor_HL — Fuselage + Wing Viewer</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -34,19 +34,22 @@ h1 span { color: #66aaff; }
 }
 .info-strip span { color: #5599cc; }
 
-/* Two-column layout: left=2D panels, right=3D+table */
+/* NEW LAYOUT: 3D centered, 2D panels flanking */
+/* 3D panel takes visual center stage */
 .main-layout {
   display: grid;
-  grid-template-columns: 1fr 420px;
+  grid-template-columns: 1fr minmax(420px,520px) 1fr;
   gap: 8px;
   padding: 8px;
+  align-items: start;
 }
-.p2d {
+.p3d-col {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  grid-column: 2;
 }
-.p3d-col {
+.p2d {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -82,17 +85,19 @@ svg.display {
   border-radius: 4px;
 }
 
-/* Three.js canvas */
+/* Three.js canvas — centered, prominent */
 #three-canvas {
   width: 100%;
-  height: 320px;
+  height: 420px;
   border-radius: 4px;
   background: #06090f;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Physics table */
 .table-wrap {
-  max-height: 320px;
+  max-height: 280px;
   overflow-y: auto;
 }
 table {
@@ -124,7 +129,7 @@ tr:hover td { background: #111e35; }
 tr.sta-hdr { background: #0d1828; color: #4499cc; font-weight: bold; }
 tr.attach-row { background: #1a1200; color: #ffaa44; }
 
-/* Vector arrows in SVG */
+/* SVG drawing styles */
 .v-arrow { stroke: #4499cc; stroke-width: 0.8; fill: none; }
 .v-dot   { fill: #4499cc; }
 .v-label { fill: #334466; font-size: 8px; font-family: 'Courier New', monospace; }
@@ -142,6 +147,14 @@ tr.attach-row { background: #1a1200; color: #ffaa44; }
 .attach-label { fill: #ffaa44; font-size: 7px; }
 .scale-bar  { stroke: #334455; stroke-width: 1; }
 .scale-tick { stroke: #334455; stroke-width: 0.8; }
+
+/* Wing styles (2D) */
+.wing-upper  { fill: rgba(26,58,106,0.38); stroke: #3366aa; stroke-width: 1.2; }
+.wing-lower  { fill: rgba(10,20,40,0.38); stroke: #3366aa; stroke-width: 1.2; }
+.wing-le     { stroke: #5599cc; stroke-width: 1; }
+.wing-te     { stroke: #3366aa; stroke-width: 0.8; }
+.wing-label  { fill: #3366aa; font-size: 7px; font-family: 'Courier New', monospace; }
+.wing-plan   { fill: rgba(26,58,106,0.28); stroke: #3366aa; stroke-width: 1.2; }
 
 /* Controls */
 .ctrl-row {
@@ -177,6 +190,29 @@ select {
   cursor: pointer;
 }
 
+/* Wing info panel */
+.wing-info {
+  background: #0a1020;
+  border: 1px solid #1a2a44;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 9px;
+  color: #3366aa;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+.wing-info .label { color: #224466; }
+.wing-info .val  { color: #66aaff; }
+.wing-info .section-title {
+  grid-column: 1 / -1;
+  color: #3366aa;
+  font-size: 8px;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #1a2a44;
+  margin-bottom: 2px;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: #06090f; }
@@ -195,45 +231,38 @@ select {
 </head>
 <body>
 
-<h1>// INTERCEPTOR_HL — Fuselage Geometry Viewer //</h1>
+<h1>// INTERCEPTOR_HL — Fuselage + Wing Geometry //</h1>
 <div class="info-strip">
   <div>L: <span id="dL">360</span> mm</div>
   <div>Ø max: <span id="dD">36</span> mm</div>
   <div>Stations: <span id="dN">30</span></div>
-  <div>Vectors: <span id="dV">—</span></div>
+  <div>Wings: <span id="dWing">Tapered</span></div>
   <div>Nose: <span id="dNose">Ogive</span></div>
   <div>Scale: <span>2.5 px/mm</span></div>
   <div><span id="dMode">3D + 2D</span></div>
 </div>
 
-<!-- 2D panels -->
+<!-- Main: 2D left | 3D center | 2D right -->
 <div class="main-layout">
+  <!-- Left column: side profile -->
   <div class="p2d">
-    <!-- Side profile view -->
     <div class="panel">
       <div class="panel-title">SIDE PROFILE — X-Z Plane</div>
-      <div class="panel-sub">ogive nose · cylindrical body · boat-tail</div>
+      <div class="panel-sub">ogive nose · cylindrical body · boat-tail · wings</div>
       <svg id="side-svg" class="display" viewBox="-40 -80 970 160" height="110"></svg>
     </div>
-    <!-- Top view -->
     <div class="panel">
       <div class="panel-title">TOP VIEW — X-Y Plane</div>
-      <div class="panel-sub">fuselage cross-section silhouette</div>
-      <svg id="top-svg" class="display" viewBox="-40 -55 970 110" height="70"></svg>
-    </div>
-    <!-- Cross-sections -->
-    <div class="panel">
-      <div class="panel-title">CROSS-SECTIONS — Y-Z Plane</div>
-      <div class="panel-sub">at key stations (nose / mid / tail)</div>
-      <svg id="cs-svg" class="display" viewBox="0 0 960 100" height="80"></svg>
+      <div class="panel-sub">fuselage + wings planform</div>
+      <svg id="top-svg" class="display" viewBox="-40 -100 970 200" height="80"></svg>
     </div>
   </div>
 
-  <!-- 3D + Table -->
+  <!-- Center: 3D viewer (prominent) -->
   <div class="p3d-col">
     <div class="panel three-wrap">
       <div class="panel-title">3D VIEW — Three.js</div>
-      <div class="panel-sub">drag to rotate · scroll to zoom</div>
+      <div class="panel-sub">drag to rotate · scroll to zoom · fuselage + wings</div>
       <canvas id="three-canvas"></canvas>
       <div class="three-hint">mouse: rotate | wheel: zoom</div>
     </div>
@@ -242,6 +271,30 @@ select {
       <div class="table-wrap">
         <table id="vec-table"><tbody></tbody></table>
       </div>
+    </div>
+  </div>
+
+  <!-- Right column: cross-sections + wing info -->
+  <div class="p2d">
+    <div class="panel">
+      <div class="panel-title">CROSS-SECTIONS — Y-Z Plane</div>
+      <div class="panel-sub">fuselage + wing root airfoil</div>
+      <svg id="cs-svg" class="display" viewBox="0 0 960 100" height="80"></svg>
+    </div>
+    <div class="wing-info" id="wing-info">
+      <div class="section-title">// MAIN WING DATA //</div>
+      <div class="label">Half-span</div><div class="val" id="wi-span">170 mm</div>
+      <div class="label">Root chord</div><div class="val" id="wi-cr">60 mm</div>
+      <div class="label">Tip chord</div><div class="val" id="wi-ct">28 mm</div>
+      <div class="label">Taper λ</div><div class="val" id="wi-taper">0.467</div>
+      <div class="label">Sweep LE</div><div class="val" id="wi-sweep">18°</div>
+      <div class="label">Dihedral</div><div class="val" id="wi-dih">5.5°</div>
+      <div class="label">AR (est.)</div><div class="val" id="wi-ar">5.67</div>
+      <div class="label">Wing area</div><div class="val" id="wi-area">0.00748 m²</div>
+      <div class="label">t/c root</div><div class="val" id="wi-tcr">12%</div>
+      <div class="label">t/c tip</div><div class="val" id="wi-tct">10%</div>
+      <div class="label">Root FS</div><div class="val" id="wi-rootx">105 mm</div>
+      <div class="label">Tip FS</div><div class="val" id="wi-tipx">165 mm</div>
     </div>
   </div>
 </div>
@@ -273,9 +326,6 @@ select {
 // ================================================================
 // PHYSICS-BASED FUSELAGE GEOMETRY (Mason Appendix)
 // ================================================================
-// Ogive: r² = a² - (x - c)²  (tangent ogive)
-// Boat-tail: linear taper from body to nozzle
-// ================================================================
 
 const SCALE = 2.5; // px per mm
 const TOTAL_LEN = 360; // mm
@@ -284,36 +334,24 @@ const NOSE_LEN = 40; // mm
 const TAIL_START = 330; // mm (boat-tail begins)
 const NOZZLE_R = 7; // mm
 
-// ================================================================
-// Ogive formula (Mason Appendix tangent ogive):
-//   r(x) = sqrt(R_body^2 - (L_nose - x)^2)  for x in [0, L_nose]
-// This passes through (0,0) and (L_nose, R_body) with smooth tangent.
-// Boat-tail: linear taper from body to nozzle.
-// ================================================================
+const ogive_L = NOSE_LEN;
+const ogive_R = MAX_R;
 
-const ogive_L = NOSE_LEN;    // 40 mm
-const ogive_R = MAX_R;       // 18 mm
-
-// Generate 30 stations with physics-accurate radii
+// Generate 30 stations
 function generateStations(n = 30) {
   const stations = [];
   for (let i = 0; i <= n; i++) {
     const x = (i / n) * TOTAL_LEN;
     let r;
     if (x <= NOSE_LEN) {
-      // Tangent (secant) ogive: r(x) = sqrt(R^2 - (L - x)^2)
-      // Geometric center at x = L_nose on axis; passes through origin and shoulder
       const dx = ogive_L - x;
       r = Math.sqrt(Math.max(0, ogive_R * ogive_R - dx * dx));
     } else if (x <= TAIL_START) {
-      // Cylindrical body
       r = MAX_R;
     } else {
-      // Boat-tail: linear taper
       const t = (x - TAIL_START) / (TOTAL_LEN - TAIL_START);
       r = MAX_R - t * (MAX_R - NOZZLE_R);
     }
-    // Clamp very small radii to 0 at the nose tip
     if (x < 0.5) r = 0;
     stations.push({ x: Math.round(x * 10) / 10, r: Math.round(r * 100) / 100 });
   }
@@ -322,9 +360,61 @@ function generateStations(n = 30) {
 
 const stations = generateStations(30);
 
-// Station labels for key stations
-const keyStaLabels = [0, 10, 20, 30, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 310, 320, 330, 340, 350, 360];
-const keyStations = stations.filter((_, i) => i % Math.ceil(stations.length / 24) === 0 || i === stations.length - 1);
+// ================================================================
+// WING GEOMETRY (parametric, physically consistent)
+// ================================================================
+const WING = {
+  rootChord:  60,    // mm
+  tipChord:   28,    // mm
+  halfSpan:   85,    // mm (root to tip, one side)
+  sweepLE:    18,    // degrees
+  dihedral:   5.5,   // degrees (tip up)
+  thicknessRoot: 0.12,
+  thicknessTip:  0.10,
+  posRootX:   105,   // mm FS — root LE position
+  color:      0x1a3a6a,
+  edgeColor:  0x4488cc,
+};
+
+// Computed wing data (updated after WING definition)
+(function updateWingInfo() {
+  const span = WING.halfSpan * 2;
+  const taper = WING.tipChord / WING.rootChord;
+  const area = 0.5 * (WING.rootChord + WING.tipChord) * span;
+  const AR = (span * span) / area;
+  document.getElementById('wi-span').textContent = span + ' mm';
+  document.getElementById('wi-cr').textContent = WING.rootChord + ' mm';
+  document.getElementById('wi-ct').textContent = WING.tipChord + ' mm';
+  document.getElementById('wi-taper').textContent = taper.toFixed(3);
+  document.getElementById('wi-sweep').textContent = WING.sweepLE + '°';
+  document.getElementById('wi-dih').textContent = WING.dihedral + '°';
+  document.getElementById('wi-ar').textContent = AR.toFixed(2);
+  document.getElementById('wi-area').textContent = (area / 1e6).toFixed(5) + ' m²';
+  document.getElementById('wi-tcr').textContent = (WING.thicknessRoot * 100).toFixed(0) + '%';
+  document.getElementById('wi-tct').textContent = (WING.thicknessTip * 100).toFixed(0) + '%';
+  document.getElementById('wi-rootx').textContent = WING.posRootX + ' mm';
+  document.getElementById('wi-tipx').textContent = (WING.posRootX + WING.halfSpan * Math.tan(WING.sweepLE * Math.PI / 180)).toFixed(0) + ' mm';
+})();
+
+// NACA 4-digit thickness distribution
+function nacaThickness(t, tc) {
+  return 5 * tc * (0.2969*Math.sqrt(t) - 0.126*t - 0.3516*t*t + 0.2843*t*t*t - 0.1015*t*t*t*t);
+}
+
+// Get chord at span fraction s (0=root, 1=tip)
+function chordAt(s) {
+  return WING.rootChord - s * (WING.rootChord - WING.tipChord);
+}
+
+// Get X sweep offset at span fraction s
+function sweepX(s) {
+  return s * WING.halfSpan * Math.tan(WING.sweepLE * Math.PI / 180);
+}
+
+// Get dihedral Z lift at span fraction s
+function dihedralZ(s) {
+  return s * WING.halfSpan * Math.tan(WING.dihedral * Math.PI / 180);
+}
 
 // ================================================================
 // SVG HELPERS
@@ -340,471 +430,694 @@ function L(x1, y1, x2, y2, cls = "") {
   return l;
 }
 function C(cx, cy, r, cls = "") {
-  const c = mk("ellipse", { cx, cy, rx: 0.5, ry: r });
+  const c = mk("circle", { cx, cy, r });
   if (cls) c.setAttribute("class", cls);
   return c;
 }
-function P(pts, cls = "") {
-  const p = mk("polyline", { points: pts.map(p => `${p[0]},${p[1]}`).join(" ") });
+function P(x, y, r, cls = "") {
+  const p = mk("circle", { cx: x, cy: y, r: r || 2 });
   if (cls) p.setAttribute("class", cls);
   return p;
 }
-function T(x, y, txt, cls = "", anchor = "middle") {
-  const t = mk("text", { x, y });
-  t.textContent = txt;
+function T(x, y, text, cls = "") {
+  const t = mk("text", { x, y, "dominant-baseline": "middle" });
+  t.textContent = text;
   if (cls) t.setAttribute("class", cls);
-  t.setAttribute("text-anchor", anchor);
   return t;
 }
-function G() { return mk("g"); }
-
-// ================================================================
-// ISOMETRIC PROJECTION
-// ================================================================
-function iso(x, y, z) {
-  // Standard isometric: 30° angles
-  const c30 = Math.cos(Math.PI / 6); // 0.866
-  const s30 = Math.sin(Math.PI / 6); // 0.5
-  const ix = (x - y) * c30;
-  const iy = (x + y) * s30 - z;
-  return { ix, iy };
+function G(cls = "") {
+  const g = mk("g");
+  if (cls) g.setAttribute("class", cls);
+  return g;
 }
 
 // ================================================================
-// DRAW SIDE VIEW
+// SIDE VIEW (X-Z) with fuselage + wings
 // ================================================================
 function drawSideView() {
   const svg = document.getElementById("side-svg");
   svg.innerHTML = "";
 
-  // Grid
-  for (let x = 0; x <= 900; x += 60) {
-    svg.appendChild(L(x, -75, x, 75, "grid-md"));
-    svg.appendChild(T(x, 5, `${Math.round(x/SCALE)}`, "dim-text", "middle"));
-  }
-  for (let z = -60; z <= 60; z += 15) {
-    svg.appendChild(L(0, -z*SCALE/1, 900, -z*SCALE/1, "grid-sm"));
-  }
+  // ── Grid ──
+  const gsm = G("grid-sm");
+  for (let x = 0; x <= 920; x += 50) gsm.appendChild(L(x, -75, x, 75));
+  for (let z = -75; z <= 75; z += 10) gsm.appendChild(L(0, z, 920, z));
+  svg.appendChild(gsm);
 
   // Centerline
-  svg.appendChild(L(0, 0, 900, 0, "centerline"));
+  svg.appendChild(L(0, 0, 920, 0, "centerline"));
 
-  // Upper skin profile (Z = +r)
-  const upperPts = stations.map(st => [st.x * SCALE, -st.r * SCALE]);
-  svg.appendChild(P(upperPts, "skin-upper"));
-
-  // Lower skin profile
-  const lowerPts = stations.map(st => [st.x * SCALE, st.r * SCALE]);
-  svg.appendChild(P(lowerPts, "skin-lower"));
-
-  // Nose ogive label
-  const ang = Math.atan2(MAX_R, NOSE_LEN) * 180 / Math.PI;
-  const nx = NOSE_LEN * SCALE * 0.5;
-  const ny = -MAX_R * SCALE * 0.5 - 6;
-  svg.appendChild(T(nx, ny, `ogive α≈${ang.toFixed(1)}°`, "dim-text"));
+  // ── Fuselage skin ──
+  const upPts = [], loPts = [];
+  for (const s of stations) {
+    upPts.push([s.x * SCALE, -s.r * SCALE]);
+    loPts.push([s.x * SCALE,  s.r * SCALE]);
+  }
+  const upPath = "M" + upPts.map(p => p.join(",")).join(" L");
+  const loPath = "M" + loPts.map(p => p.join(",")).join(" L");
+  svg.appendChild(mk("path", { d: upPath, class: "skin-upper" }));
+  svg.appendChild(mk("path", { d: loPath, class: "skin-lower" }));
 
   // Boat-tail section
-  const btStart = TAIL_START * SCALE;
-  const btEnd = TOTAL_LEN * SCALE;
-  svg.appendChild(L(btStart, -MAX_R * SCALE, btEnd, -NOZZLE_R * SCALE, "skin-boat"));
-  svg.appendChild(L(btStart, MAX_R * SCALE, btEnd, NOZZLE_R * SCALE, "skin-boat"));
-  svg.appendChild(T((btStart + btEnd) / 2, -10, "boat-tail", "dim-text"));
+  const btPts = stations.filter(s => s.x >= TAIL_START);
+  if (btPts.length > 1) {
+    const btUp = "M" + btPts.map(s => [s.x * SCALE, -s.r * SCALE].join(",")).join(" L");
+    const btLo = "M" + btPts.map(s => [s.x * SCALE, s.r * SCALE].join(",")).join(" L");
+    svg.appendChild(mk("path", { d: btUp, class: "skin-boat" }));
+    svg.appendChild(mk("path", { d: btLo, class: "skin-boat" }));
+  }
 
-  // Station rings (horizontal lines at key stations)
-  stations.forEach(st => {
-    if (st.x % 60 < 0.5) {
-      const cx = st.x * SCALE;
-      svg.appendChild(L(cx, -st.r * SCALE, cx, st.r * SCALE, "ring-cs"));
+  // ── WINGS in side view ──
+  // Project wing as a tapered airfoil shape at the wing FS
+  // Wing root chord line (side view = thin airfoil shape)
+  const xRoot = WING.posRootX * SCALE;
+  const xTip  = (WING.posRootX + sweepX(1)) * SCALE;
+  const cRoot = WING.rootChord * SCALE;
+  const cTip  = WING.tipChord * SCALE;
+  const zRoot = MAX_R * SCALE;
+  const zTipDih = MAX_R * SCALE + dihedralZ(1) * SCALE;
+  const tRoot = WING.thicknessRoot;
+  const tTip  = WING.thicknessTip;
+
+  // Wing upper surface (root)
+  const rootUp_y  = zRoot - tRoot * WING.rootChord * 0.5 * SCALE;
+  const rootLo_y  = zRoot + tRoot * WING.rootChord * 0.5 * SCALE;
+  const rootUp2_y = zRoot - tRoot * WING.rootChord * 0.5 * SCALE * 0.8;
+  const rootLo2_y = zRoot + tRoot * WING.rootChord * 0.5 * SCALE * 0.8;
+  // Tip
+  const tipUp_y   = zTipDih - tTip * WING.tipChord * 0.5 * SCALE;
+  const tipLo_y   = zTipDih + tTip * WING.tipChord * 0.5 * SCALE;
+  const tipUp2_y  = zTipDih - tTip * WING.tipChord * 0.5 * SCALE * 0.8;
+  const tipLo2_y  = zTipDih + tTip * WING.tipChord * 0.5 * SCALE * 0.8;
+
+  // Root airfoil shape
+  const rRoot_xTE = xRoot + cRoot;
+  const rootAirfoil = `M${xRoot},${rootUp_y} L${xRoot + cRoot * 0.3},${rootUp2_y} L${xRoot + cRoot * 0.7},${rootLo2_y} L${rRoot_xTE},${rootLo_y} L${rRoot_xTE},${rootUp_y} Z`;
+  svg.appendChild(mk("path", { d: rootAirfoil, class: "wing-upper" }));
+
+  // Tip airfoil shape
+  const rTip_xTE = xTip + cTip;
+  const tipAirfoil = `M${xTip},${tipUp_y} L${xTip + cTip * 0.3},${tipUp2_y} L${xTip + cTip * 0.7},${tipLo2_y} L${rTip_xTE},${tipLo_y} L${rTip_xTE},${tipUp_y} Z`;
+  svg.appendChild(mk("path", { d: tipAirfoil, fill: "rgba(26,58,106,0.28)", stroke: "#3366aa", "stroke-width": 1.2 }));
+
+  // Trailing edge line
+  svg.appendChild(mk("line", { x1: rRoot_xTE, y1: rootUp_y, x2: rTip_xTE, y2: tipUp_y, class: "wing-te" }));
+  svg.appendChild(mk("line", { x1: rRoot_xTE, y1: rootLo_y, x2: rTip_xTE, y2: tipLo_y, class: "wing-te" }));
+  // Leading edge line
+  svg.appendChild(mk("line", { x1: xRoot, y1: rootUp_y, x2: xTip, y2: tipUp_y, class: "wing-le" }));
+
+  // Diagonal hatch fill for root wing section
+  for (let i = 0; i < 5; i++) {
+    const x1 = xRoot + i * 12;
+    const x2 = xRoot + (i + 1) * 12;
+    svg.appendChild(mk("line", {
+      x1, y1: rootUp_y + i * 2, x2, y2: rootUp_y + (i + 1) * 2,
+      stroke: "#224477", "stroke-width": 0.5
+    }));
+  }
+
+  // Wing label
+  svg.appendChild(T(xRoot - 8, rootUp_y - 4, "W-LE", "wing-label"));
+  svg.appendChild(T(xRoot - 8, rootLo_y + 5, "W-TE", "wing-label"));
+  svg.appendChild(T(xTip, tipUp_y - 4, "tip", "wing-label"));
+
+  // ── Vectors at selected stations ──
+  const nVec = parseInt(document.getElementById("vec-select").value);
+  const step = Math.max(1, Math.floor(30 / nVec));
+  const angles = [];
+  for (let a = 0; a < 360; a += 360 / nVec) angles.push(a * Math.PI / 180);
+
+  for (let i = 0; i < stations.length; i += step) {
+    const s = stations[i];
+    const px = s.x * SCALE;
+    const py = 0;
+    const rPx = s.r * SCALE;
+    for (const ang of angles) {
+      const vx = rPx * Math.sin(ang);
+      const vz = -rPx * Math.cos(ang);
+      svg.appendChild(L(px, py, px + vx, vz, "v-arrow"));
+      svg.appendChild(P(px + vx, vz, 1, "v-dot"));
     }
-  });
+  }
 
-  // Vectors: outward arrows at each station (Z direction only)
-  const nVec = parseInt(document.getElementById("sec-select").value === "all" ? 1 : 1);
-  stations.forEach((st, i) => {
-    if (i % 3 !== 0 && i !== stations.length - 1) return;
-    const cx = st.x * SCALE;
-    const cy = -st.r * SCALE;
-    const arrowLen = 20;
-    // Up arrow
-    const ey = cy - arrowLen;
-    svg.appendChild(L(cx, cy, cx, ey, "v-arrow"));
-    svg.appendChild(T(cx, ey - 5, "↑", "v-dot", "middle"));
-    // Down arrow
-    const ey2 = st.r * SCALE + arrowLen;
-    svg.appendChild(L(cx, st.r * SCALE, cx, ey2, "v-arrow"));
-    svg.appendChild(T(cx, ey2 + 6, "↓", "v-dot", "middle"));
-  });
+  // ── Dimensions ──
+  svg.appendChild(L(0, 40, TOTAL_LEN * SCALE, 40, "dim-line"));
+  svg.appendChild(L(0, 38, 0, 42, "scale-tick"));
+  svg.appendChild(L(TOTAL_LEN * SCALE, 38, TOTAL_LEN * SCALE, 42, "scale-tick"));
+  svg.appendChild(T(TOTAL_LEN * SCALE / 2, 45, "L = " + TOTAL_LEN + " mm", "dim-text"));
 
-  // Dimension: nose length
-  svg.appendChild(L(0, -MAX_R * SCALE - 15, NOSE_LEN * SCALE, -MAX_R * SCALE - 15, "dim-line"));
-  svg.appendChild(L(0, -MAX_R * SCALE - 18, 0, -MAX_R * SCALE - 12, "dim-line"));
-  svg.appendChild(L(NOSE_LEN * SCALE, -MAX_R * SCALE - 18, NOSE_LEN * SCALE, -MAX_R * SCALE - 12, "dim-line"));
-  svg.appendChild(T(NOSE_LEN * SCALE / 2, -MAX_R * SCALE - 20, "40 mm", "dim-text"));
-
-  // Dimension: total length
-  svg.appendChild(L(0, MAX_R * SCALE + 15, TOTAL_LEN * SCALE, MAX_R * SCALE + 15, "dim-line"));
-  svg.appendChild(L(0, MAX_R * SCALE + 18, 0, MAX_R * SCALE + 12, "dim-line"));
-  svg.appendChild(L(TOTAL_LEN * SCALE, MAX_R * SCALE + 18, TOTAL_LEN * SCALE, MAX_R * SCALE + 12, "dim-line"));
-  svg.appendChild(T(TOTAL_LEN * SCALE / 2, MAX_R * SCALE + 22, "360 mm", "dim-text"));
-
-  // Axis labels
-  svg.appendChild(T(-5, -60, "Z", "v-dot", "end"));
-  svg.appendChild(T(-5, 70, "−Z", "v-dot", "end"));
-  svg.appendChild(T(880, 5, "→ X (mm)", "dim-text"));
-
-  // Attachment points (from knowledge.tsx)
-  const attach = {
-    "WING_ROOT":    { x: 120, z: MAX_R },
-    "H_STAB_ROOT":  { x: 290, z: MAX_R },
-    "V_STAB_ROOT":  { x: 290, z: MAX_R },
-    "NOSE_PORT":    { x: 30,  z: MAX_R },
-    "CANOPY_RAF":   { x: 80,  z: MAX_R },
-    "INTAKE_LIP":   { x: 360, z: NOZZLE_R },
-  };
-  Object.entries(attach).forEach(([name, pt]) => {
-    const cx = pt.x * SCALE;
-    const cz = pt.z * SCALE;
-    svg.appendChild(C(cx, -cz, 3, "attach-pt"));
-    svg.appendChild(T(cx + 5, -cz - 3, name, "attach-label"));
-  });
+  // Station markers
+  const staMarkers = [0, 40, 105, 180, 270, 330, 360];
+  for (const x of staMarkers) {
+    const px = x * SCALE;
+    svg.appendChild(L(px, -MAX_R * SCALE - 4, px, -MAX_R * SCALE - 1, "dim-line"));
+    svg.appendChild(T(px, -MAX_R * SCALE - 8, x + "", "dim-text"));
+  }
 
   // Scale bar
-  const barY = 60;
-  svg.appendChild(L(20, barY, 220, barY, "scale-bar"));
-  svg.appendChild(L(20, barY - 4, 20, barY + 4, "scale-tick"));
-  svg.appendChild(L(220, barY - 4, 220, barY + 4, "scale-tick"));
-  svg.appendChild(T(120, barY + 10, "80 mm", "dim-text"));
+  const scaleBar = mk("g", { class: "scale-bar" });
+  scaleBar.appendChild(L(10, 65, 110, 65));
+  scaleBar.appendChild(L(10, 63, 10, 67));
+  scaleBar.appendChild(L(110, 63, 110, 67));
+  scaleBar.appendChild(T(60, 72, "100 mm"));
+  svg.appendChild(scaleBar);
 }
 
 // ================================================================
-// DRAW TOP VIEW
+// TOP VIEW (X-Y) with fuselage + wings planform
 // ================================================================
 function drawTopView() {
   const svg = document.getElementById("top-svg");
   svg.innerHTML = "";
 
-  // Grid
-  for (let x = 0; x <= 900; x += 60) svg.appendChild(L(x, -50, x, 50, "grid-md"));
-  for (let y = -45; y <= 45; y += 15) svg.appendChild(L(0, y, 900, y, "grid-sm"));
+  // ── Grid ──
+  const gsm = G("grid-sm");
+  for (let x = 0; x <= 920; x += 50) gsm.appendChild(L(x, -95, x, 95));
+  for (let y = -95; y <= 95; y += 10) gsm.appendChild(L(0, y, 920, y));
+  svg.appendChild(gsm);
 
-  // Fuselage silhouette (outline in Y)
-  const upperSil = stations.map(st => [st.x * SCALE, -st.r * SCALE]);
-  const lowerSil = stations.map(st => [st.x * SCALE, st.r * SCALE]).reverse();
-  const silPts = [...upperSil, ...lowerSil];
-  svg.appendChild(P(silPts, "skin-upper"));
+  // Fuselage centerline
+  svg.appendChild(L(0, 0, 920, 0, "centerline"));
 
-  // Centerline
-  svg.appendChild(L(0, 0, 900, 0, "centerline"));
+  // Fuselage cross-section silhouette (width = 2R)
+  const silPath = "M" + stations.map(s => [s.x * SCALE, s.r * SCALE * 2].join(",")).join(" L");
+  const silPathBot = "M" + stations.map(s => [s.x * SCALE, -s.r * SCALE * 2].join(",")).join(" L");
+  svg.appendChild(mk("path", { d: silPath, fill: "rgba(20,40,80,0.3)", stroke: "#2255aa", "stroke-width": 1 }));
+  svg.appendChild(mk("path", { d: silPathBot, fill: "rgba(20,40,80,0.3)", stroke: "#2255aa", "stroke-width": 1 }));
 
-  // Cross-section circles at key stations
-  [40, 120, 240, 300, 330, 360].forEach(x => {
-    const st = stations.find(s => Math.abs(s.x - x) < 2);
-    if (!st) return;
-    const cx = st.x * SCALE;
-    svg.appendChild(C(cx, 0, st.r * SCALE, "ring-cs"));
-    svg.appendChild(T(cx, -st.r * SCALE - 5, `${x}mm`, "dim-text"));
-  });
+  // ── WINGS planform (both sides) ──
+  const xRoot = WING.posRootX * SCALE;
+  const xRootTE = (WING.posRootX + WING.rootChord) * SCALE;
+  const spanPx = WING.halfSpan * SCALE;
+  const xTipLE  = (WING.posRootX + sweepX(1)) * SCALE;
+  const xTipTE  = (WING.posRootX + sweepX(1) + WING.tipChord) * SCALE;
 
-  // Attachment points (wing roots etc.)
-  const cx120 = 120 * SCALE;
-  svg.appendChild(C(cx120, 0, MAX_R * SCALE, "attach-pt"));
-  svg.appendChild(T(cx120 + 5, 5, "WING_ROOT", "attach-label"));
+  // Right wing
+  const rightPath = `M${xRoot},0 L${xTipLE},${spanPx} L${xTipTE},${spanPx} L${xRootTE},0 Z`;
+  svg.appendChild(mk("path", { d: rightPath, class: "wing-plan" }));
 
-  // Axis labels
-  svg.appendChild(T(880, 5, "→ X (mm)", "dim-text"));
-  svg.appendChild(T(-5, -45, "Y+", "v-dot", "end"));
-  svg.appendChild(T(-5, 45, "Y−", "v-dot", "end"));
+  // Left wing (mirror)
+  const leftPath = `M${xRoot},0 L${xTipLE},${-spanPx} L${xTipTE},${-spanPx} L${xRootTE},0 Z`;
+  svg.appendChild(mk("path", { d: leftPath, class: "wing-plan" }));
+
+  // Sweep lines (leading edge)
+  svg.appendChild(mk("line", { x1: xRoot, y1: 0, x2: xTipLE, y2: spanPx, class: "wing-le" }));
+  svg.appendChild(mk("line", { x1: xRoot, y1: 0, x2: xTipLE, y2: -spanPx, class: "wing-le" }));
+
+  // Trailing edge
+  svg.appendChild(mk("line", { x1: xRootTE, y1: 0, x2: xTipTE, y2: spanPx, class: "wing-te" }));
+  svg.appendChild(mk("line", { x1: xRootTE, y1: 0, x2: xTipTE, y2: -spanPx, class: "wing-te" }));
+
+  // Span dimension lines
+  svg.appendChild(mk("line", { x1: xTipTE + 5, y1: -spanPx - 5, x2: xTipTE + 5, y2: spanPx + 5, stroke: "#224477", "stroke-width": 0.6, "stroke-dasharray": "2,2" }));
+
+  // Wing labels
+  const spanLbl = T(xTipTE + 8, 0, "b=" + (WING.halfSpan * 2) + "mm", "wing-label");
+  spanLbl.setAttribute("dominant-baseline", "middle");
+  svg.appendChild(spanLbl);
+  const crLbl = T(xRoot + 5, -5, "Cr=" + WING.rootChord + "mm", "wing-label");
+  crLbl.setAttribute("dominant-baseline", "middle");
+  svg.appendChild(crLbl);
+  const ctLbl = T(xTipLE + 2, spanPx - 5, "Ct=" + WING.tipChord + "mm", "wing-label");
+  svg.appendChild(ctLbl);
+
+  // Quarter-chord line
+  const qcRoot = (WING.posRootX + 0.25 * WING.rootChord) * SCALE;
+  const qcTip  = (WING.posRootX + sweepX(1) + 0.25 * WING.tipChord) * SCALE;
+  svg.appendChild(mk("line", { x1: qcRoot, y1: 0, x2: qcTip, y2: spanPx, stroke: "#5588cc", "stroke-width": 0.6, "stroke-dasharray": "4,2" }));
+  svg.appendChild(mk("line", { x1: qcRoot, y1: 0, x2: qcTip, y2: -spanPx, stroke: "#5588cc", "stroke-width": 0.6, "stroke-dasharray": "4,2" }));
+
+  // Wing root station marker
+  svg.appendChild(L(xRoot, -spanPx - 12, xRoot, spanPx + 12, "dim-line"));
+
+  // ── Vectors ──
+  const nVec = parseInt(document.getElementById("vec-select").value);
+  const step = Math.max(1, Math.floor(30 / nVec));
+  const angles = [];
+  for (let a = 0; a < 360; a += 360 / nVec) angles.push(a * Math.PI / 180);
+
+  for (let i = 0; i < stations.length; i += step) {
+    const s = stations[i];
+    const px = s.x * SCALE;
+    const py = 0;
+    const rPx = s.r * SCALE;
+    for (const ang of angles) {
+      const vx = 0;
+      const vy = rPx * Math.sin(ang);
+      svg.appendChild(L(px, py, px + vx, py + vy, "v-arrow"));
+      svg.appendChild(P(px + vx, py + vy, 1, "v-dot"));
+    }
+  }
 
   // Scale bar
-  svg.appendChild(L(20, 40, 220, 40, "scale-bar"));
-  svg.appendChild(T(120, 50, "80 mm", "dim-text"));
-
-  // Station labels
-  stations.forEach(st => {
-    if (st.x % 60 < 0.5) {
-      svg.appendChild(T(st.x * SCALE, 5, `${st.x}`, "dim-text"));
-    }
-  });
+  const scaleBar = mk("g", { class: "scale-bar" });
+  scaleBar.appendChild(L(10, 80, 110, 80));
+  scaleBar.appendChild(L(10, 78, 10, 82));
+  scaleBar.appendChild(L(110, 78, 110, 82));
+  scaleBar.appendChild(T(60, 88, "100 mm"));
+  svg.appendChild(scaleBar);
 }
 
 // ================================================================
-// DRAW CROSS-SECTIONS (Y-Z plane at key X stations)
+// CROSS-SECTIONS (Y-Z) with fuselage rings + wing airfoil
 // ================================================================
 function drawCrossSections() {
   const svg = document.getElementById("cs-svg");
   svg.innerHTML = "";
 
-  const csStations = [0, 40, 120, 240, 330, 360];
-  const slotW = 960 / csStations.length;
+  const csStations = [0, 10, 20, 30, 40, 60, 80, 120, 160, 180, 220, 260, 300, 330, 340, 350, 360];
+  const W = 960;
+  const H = 100;
+  const cols = 6;
+  const rows = Math.ceil(csStations.length / cols);
+  const cellW = W / cols;
+  const cellH = H / rows;
+  const scaleCS = 1.8;
 
-  csStations.forEach((xVal, idx) => {
-    const st = stations.find(s => Math.abs(s.x - xVal) < 3) || stations[idx * 5];
-    const cx = idx * slotW + slotW / 2;
-    const cy = 50;
-    const r = st.r * 1.5;
+  for (let i = 0; i < csStations.length; i++) {
+    const idx = csStations[i];
+    const sta = stations[idx];
+    if (!sta) continue;
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = col * cellW + cellW / 2;
+    const cy = row * cellH + cellH / 2;
 
-    // Draw ellipse (Y-Z cross-section)
-    const ell = mk("ellipse", {
-      cx, cy,
-      rx: r, ry: r,
-      fill: "rgba(34,85,170,0.08)",
-      stroke: "#2255aa",
-      "stroke-width": "1"
-    });
-    svg.appendChild(ell);
+    // Cell border
+    svg.appendChild(L(col * cellW, row * cellH, (col + 1) * cellW, row * cellH, "grid-md"));
+    svg.appendChild(L((col + 1) * cellW, row * cellH, (col + 1) * cellW, (row + 1) * cellH, "grid-md"));
 
-    // Axis lines
-    svg.appendChild(L(cx - r - 10, cy, cx + r + 10, cy, "grid-sm"));
-    svg.appendChild(L(cx, 5, cx, 95, "grid-sm"));
+    // Cross-section ring
+    const rPx = Math.max(1, sta.r * scaleCS);
+    svg.appendChild(mk("circle", { cx, cy, r: rPx, class: "ring-cs" }));
+    svg.appendChild(C(cx, cy, 2, "v-dot"));
 
-    // Label
-    svg.appendChild(T(cx, 97, `x=${st.x}mm r=${st.r}mm`, "dim-text"));
-
-    // Vectors: 8 directions around the circle
-    const nVec = 8;
-    for (let a = 0; a < 360; a += 360 / nVec) {
-      const rad = a * Math.PI / 180;
-      const ey2 = cy + Math.sin(rad) * (r + 12);
-      const ex = cx + Math.cos(rad) * (r + 12);
-      const ty = cy + Math.sin(rad) * (r + 20);
-      const tx = cx + Math.cos(rad) * (r + 20);
-      svg.appendChild(L(cx + Math.cos(rad) * r, cy + Math.sin(rad) * r, ex, ey2, "v-arrow"));
-      const labels = ["0°", "45°", "90°", "135°", "180°", "225°", "270°", "315°"];
-      svg.appendChild(T(tx, ty + 3, labels[a / (360 / nVec)], "dim-text"));
+    // Vectors
+    const nVec = parseInt(document.getElementById("vec-select").value);
+    const angles = [];
+    for (let a = 0; a < 360; a += 360 / nVec) angles.push(a * Math.PI / 180);
+    for (const ang of angles) {
+      const vx = rPx * Math.cos(ang);
+      const vy = rPx * Math.sin(ang);
+      svg.appendChild(L(cx, cy, cx + vx, cy + vy, "v-arrow"));
+      svg.appendChild(P(cx + vx, cy + vy, 1, "v-dot"));
     }
-  });
+
+    // Station label
+    svg.appendChild(T(cx - rPx - 2, cy - rPx - 2, "FS" + sta.x, "v-label"));
+
+    // ── WING ROOT AIRFOIL at wing FS ──
+    if (Math.abs(sta.x - WING.posRootX) < 5) {
+      const halfSpanPx = WING.halfSpan * scaleCS;
+      const chordPx = WING.rootChord * scaleCS;
+      const thickPx = WING.thicknessRoot * chordPx;
+      const dihedralPx = dihedralZ(1) * scaleCS;
+
+      // Root airfoil: upper and lower surface lines extending outward
+      const leX = cx + 0;
+      const leY = cy;
+      const teX = cx + chordPx;
+      const teY = cy;
+
+      // Upper airfoil line (from LE going forward then trailing edge)
+      const upperPath = `M${leX},${leY - thickPx * 0.5} L${teX},${leY - thickPx * 0.3} L${teX},${leY + thickPx * 0.3}`;
+      const lowerPath = `M${leX},${leY + thickPx * 0.5} L${teX},${leY + thickPx * 0.3}`;
+
+      svg.appendChild(mk("path", { d: upperPath, stroke: "#5599cc", "stroke-width": 1.2, fill: "none" }));
+      svg.appendChild(mk("path", { d: lowerPath, stroke: "#4488cc", "stroke-width": 1.2, fill: "none" }));
+
+      // Wing chord line
+      svg.appendChild(mk("line", { x1: leX, y1: leY, x2: teX, y2: teY, stroke: "#3366aa", "stroke-width": 0.8 }));
+
+      // Wing airfoil label
+      svg.appendChild(T(leX, leY - thickPx - 5, "W-root", "wing-label"));
+
+      // Span arrow (upward showing wing going out of page)
+      svg.appendChild(mk("line", { x1: teX + 10, y1: leY, x2: teX + 10, y2: leY - halfSpanPx, stroke: "#3366aa", "stroke-width": 1 }));
+      svg.appendChild(mk("polygon", { points: `${teX+10},${leY-halfSpanPx-5} ${teX+6},${leY-halfSpanPx} ${teX+14},${leY-halfSpanPx}`, fill: "#3366aa" }));
+      svg.appendChild(T(teX + 12, leY - halfSpanPx * 0.5, "b/2=" + WING.halfSpan + "mm", "wing-label"));
+    }
+  }
 }
 
 // ================================================================
-// THREE.JS 3D VIEW
+// THREE.JS 3D SCENE
 // ================================================================
-let scene, camera, renderer, mesh;
-let isDragging = false, lastX = 0, lastY = 0;
-let rotX = 0.3, rotY = 0.5;
+let scene, camera, renderer, mesh, meshGroup;
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let rotY = 0.3, rotX = 0.4;
+const FOV = 50;
 
 function initThree() {
   const canvas = document.getElementById("three-canvas");
-  const w = canvas.clientWidth || 400;
-  const h = canvas.clientHeight || 320;
+  const w = canvas.clientWidth || 500;
+  const h = canvas.clientHeight || 420;
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x06090f);
+  scene.fog = new THREE.Fog(0x06090f, 600, 1200);
 
-  camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
-  camera.position.set(400, 200, 300);
+  camera = new THREE.PerspectiveCamera(FOV, w / h, 1, 2000);
+  // Center camera to see fuselage + wings
+  camera.position.set(280, 200, 320);
   camera.lookAt(180, 0, 0);
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  // Lighting
-  const ambient = new THREE.AmbientLight(0x334466, 0.8);
+  // ── Lighting ──
+  const ambient = new THREE.AmbientLight(0x1a2a40, 1.2);
   scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0x6699cc, 1.0);
-  dirLight.position.set(200, 300, 200);
-  scene.add(dirLight);
-  const pointLight = new THREE.PointLight(0x88aacc, 0.5);
-  pointLight.position.set(-100, -100, 200);
-  scene.add(pointLight);
 
-  // Build fuselage mesh
-  buildFuselageMesh();
+  const sun = new THREE.DirectionalLight(0x88aacc, 2.0);
+  sun.position.set(300, 400, 200);
+  sun.castShadow = true;
+  scene.add(sun);
 
-  // Grid helper
-  const grid = new THREE.GridHelper(500, 20, 0x112233, 0x0a1520);
-  grid.position.set(180, 0, 0);
+  const fill = new THREE.DirectionalLight(0x446688, 0.8);
+  fill.position.set(-200, 100, -200);
+  scene.add(fill);
+
+  const rim = new THREE.DirectionalLight(0x66aaff, 0.6);
+  rim.position.set(0, -200, -300);
+  scene.add(rim);
+
+  // ── Axes helper ──
+  const axes = new THREE.AxesHelper(100);
+  axes.position.set(-20, 0, 0);
+  scene.add(axes);
+
+  // ── Ground grid ──
+  const grid = new THREE.GridHelper(600, 60, 0x0e1828, 0x0e1828);
+  grid.position.y = -50;
   scene.add(grid);
 
-  // Axes
-  const axLen = 200;
-  const axesMat = { red: 0xff4444, green: 0x44ff44, blue: 0x4488ff };
-  [
-    { from: [0,0,0], to: [axLen,0,0], col: axesMat.red },
-    { from: [0,0,0], to: [0,axLen,0], col: axesMat.green },
-    { from: [0,0,0], to: [0,0,axLen], col: axesMat.blue },
-  ].forEach(a => {
-    const mat = new THREE.LineBasicMaterial({ color: a.col });
-    const geo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(...a.from), new THREE.Vector3(...a.to)
-    ]);
-    scene.add(new THREE.Line(geo, mat));
+  // ── Fuselage Mesh ──
+  const { geo, points } = buildFuselageMesh();
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x1a3060,
+    emissive: 0x050a18,
+    specular: 0x5599cc,
+    shininess: 80,
+    transparent: true,
+    opacity: 0.92,
+    side: THREE.DoubleSide,
   });
+  mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
 
-  // Mouse controls
-  canvas.addEventListener("mousedown", e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
-  window.addEventListener("mouseup", () => isDragging = false);
-  window.addEventListener("mousemove", e => {
+  // ── Wing Mesh ──
+  const [rightWing, leftWing] = buildBothWings();
+  scene.add(rightWing);
+  scene.add(leftWing);
+
+  // Wing tip markers
+  const tipGeo = new THREE.SphereGeometry(1.5, 8, 8);
+  const tipMat = new THREE.MeshBasicMaterial({ color: 0x66aaff });
+  const tipR = new THREE.Mesh(tipGeo, tipMat);
+  const tipL = new THREE.Mesh(tipGeo, tipMat);
+  const tipX = WING.posRootX + sweepX(1) + WING.tipChord * 0.5;
+  const tipZ = dihedralZ(1);
+  tipR.position.set(tipX, tipZ, WING.halfSpan);
+  tipL.position.set(tipX, tipZ, -WING.halfSpan);
+  scene.add(tipR); scene.add(tipL);
+
+  // ── Mouse Interaction ──
+  canvas.addEventListener("mousedown", e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener("mouseup", () => { isDragging = false; });
+  canvas.addEventListener("mouseleave", () => { isDragging = false; });
+  canvas.addEventListener("mousemove", e => {
     if (!isDragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
     rotY += dx * 0.005;
     rotX += dy * 0.005;
-    rotX = Math.max(-1.5, Math.min(1.5, rotX));
-    lastX = e.clientX;
-    lastY = e.clientY;
-    updateCamera();
+    rotX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, rotX));
+    prevMouse = { x: e.clientX, y: e.clientY };
   });
   canvas.addEventListener("wheel", e => {
     e.preventDefault();
-    camera.position.multiplyScalar(e.deltaY > 0 ? 1.1 : 0.9);
-    updateCamera();
+    const fov = camera.fov + e.deltaY * 0.05;
+    camera.fov = Math.max(20, Math.min(90, fov));
+    camera.updateProjectionMatrix();
   });
 
-  updateCamera();
+  // Touch support
+  let lastTouch = null;
+  canvas.addEventListener("touchstart", e => { lastTouch = e.touches[0]; });
+  canvas.addEventListener("touchmove", e => {
+    if (!lastTouch) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const dx = t.clientX - lastTouch.clientX;
+    const dy = t.clientY - lastTouch.clientY;
+    rotY += dx * 0.005;
+    rotX += dy * 0.005;
+    rotX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, rotX));
+    lastTouch = t;
+  }, { passive: false });
+  canvas.addEventListener("touchend", () => { lastTouch = null; });
+
   animate();
 }
 
+// ── Build fuselage mesh (Three.js LatheGeometry) ──
+function buildFuselageMesh() {
+  const pts = [];
+  // Nose tip
+  pts.push(new THREE.Vector2(0, 0));
+  // Nose ogive
+  const nosePts = 12;
+  for (let i = 1; i <= nosePts; i++) {
+    const ang = (i / nosePts) * Math.PI * 0.5;
+    // Parametric ogive
+    const t = i / nosePts;
+    const x = t * NOSE_LEN;
+    const dx = NOSE_LEN - x;
+    const r = Math.sqrt(Math.max(0, MAX_R * MAX_R - dx * dx));
+    pts.push(new THREE.Vector2(r, x));
+  }
+  // Cylindrical body
+  const bodyPts = 8;
+  for (let i = 1; i <= bodyPts; i++) {
+    const t = i / bodyPts;
+    const x = NOSE_LEN + t * (TAIL_START - NOSE_LEN);
+    pts.push(new THREE.Vector2(MAX_R, x));
+  }
+  // Boat-tail
+  const btPts = 6;
+  for (let i = 1; i <= btPts; i++) {
+    const t = i / btPts;
+    const x = TAIL_START + t * (TOTAL_LEN - TAIL_START);
+    const r = MAX_R - t * (MAX_R - NOZZLE_R);
+    pts.push(new THREE.Vector2(r, x));
+  }
+  // Nozzle end
+  pts.push(new THREE.Vector2(NOZZLE_R, TOTAL_LEN));
+
+  const geo = new THREE.LatheGeometry(pts, 40);
+  geo.computeVertexNormals();
+
+  // Station points (for table)
+  const points = stations.map(s => ({
+    x: s.x, r: s.r,
+    yVecs: [{ y: s.r, z: 0 }, { y: 0, z: s.r }, { y: -s.r, z: 0 }, { y: 0, z: -s.r }],
+  }));
+
+  return { geo, points };
+}
+
+// ── Build both wings ──
+function buildBothWings() {
+  const N = 20; // spanwise segments
+  const M = 16; // chordwise points
+  const verts = [];
+  const indices = [];
+
+  function buildSideWing() {
+    const vLocal = [];
+    const iLocal = [];
+    const stride = (M + 1) * 2;
+
+    for (let i = 0; i <= N; i++) {
+      const s = i / N;
+      const y = s * WING.halfSpan;
+      const c = chordAt(s);
+      const sx = sweepX(s);
+      const dz = dihedralZ(s);
+      const tc = WING.thicknessRoot - s * (WING.thicknessRoot - WING.thicknessTip);
+      const xBase = WING.posRootX + sx;
+
+      // Upper surface vertices
+      for (let j = 0; j <= M; j++) {
+        const t = j / M;
+        const yt = nacaThickness(t, tc);
+        const xLocal = t * c - c * 0.25; // quarter-chord reference
+        vLocal.push(xBase + xLocal, dz + yt * c, y);
+      }
+      // Lower surface vertices
+      for (let j = 0; j <= M; j++) {
+        const t = j / M;
+        const yt = nacaThickness(t, tc);
+        const xLocal = t * c - c * 0.25;
+        vLocal.push(xBase + xLocal, dz - yt * c, y);
+      }
+    }
+
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < M; j++) {
+        const a = i * stride + j;
+        const b = a + 1;
+        const c2 = (i + 1) * stride + j;
+        const d = c2 + 1;
+        // Upper
+        iLocal.push(a, c2, b, b, c2, d);
+        // Lower
+        const au = i * stride + (M + 1) + j;
+        const bu = au + 1;
+        const cu = (i + 1) * stride + (M + 1) + j;
+        const du = cu + 1;
+        iLocal.push(au, bu, cu, bu, du, cu);
+      }
+    }
+
+    // Root cap
+    const base = 0;
+    for (let j = 0; j < M; j++) {
+      iLocal.push(base + j, base + j + 1, base + (M + 1) + j + 1);
+      iLocal.push(base + j, base + (M + 1) + j + 1, base + (M + 1) + j);
+    }
+    // Tip cap
+    const tipBase = N * stride;
+    for (let j = 0; j < M; j++) {
+      iLocal.push(tipBase + j, tipBase + (M + 1) + j, tipBase + j + 1);
+      iLocal.push(tipBase + j + 1, tipBase + (M + 1) + j, tipBase + (M + 1) + j + 1);
+    }
+
+    return { v: vLocal, i: iLocal };
+  }
+
+  const { v, i } = buildSideWing();
+
+  // Right wing
+  const geoR = new THREE.BufferGeometry();
+  geoR.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  geoR.setIndex(i);
+  geoR.computeVertexNormals();
+
+  const mat = new THREE.MeshPhongMaterial({
+    color: WING.color,
+    emissive: 0x0a1a30,
+    specular: WING.edgeColor,
+    shininess: 60,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.92,
+  });
+
+  const rightWing = new THREE.Mesh(geoR, mat);
+  rightWing.castShadow = true;
+
+  // Left wing (mirror in Z)
+  const geoL = new THREE.BufferGeometry();
+  const vL = [...v];
+  for (let k = 2; k < vL.length; k += 3) vL[k] *= -1;
+  geoL.setAttribute('position', new THREE.Float32BufferAttribute(vL, 3));
+  geoL.setIndex(i);
+  geoL.computeVertexNormals();
+  const leftWing = new THREE.Mesh(geoL, mat.clone());
+
+  // Wing leading edge tube highlight
+  const lePts = [];
+  for (let i = 0; i <= N; i++) {
+    const s = i / N;
+    lePts.push(new THREE.Vector3(WING.posRootX + sweepX(s), dihedralZ(s), WING.halfSpan * s));
+  }
+  const leCurve = new THREE.CatmullRomCurve3(lePts);
+  const leGeo = new THREE.TubeGeometry(leCurve, N, 0.6, 6, false);
+  const leMat = new THREE.MeshBasicMaterial({ color: 0x5599cc });
+  const leMesh = new THREE.Mesh(leGeo, leMat);
+  rightWing.add(leMesh);
+
+  const lePtsL = lePts.map(p => new THREE.Vector3(p.x, p.y, -p.z));
+  const leCurveL = new THREE.CatmullRomCurve3(lePtsL);
+  const leGeoL = new THREE.TubeGeometry(leCurveL, N, 0.6, 6, false);
+  const leMeshL = new THREE.Mesh(leGeoL, leMat.clone());
+  leftWing.add(leMeshL);
+
+  return [rightWing, leftWing];
+}
+
 function updateCamera() {
-  const r = 500;
-  camera.position.x = r * Math.sin(rotY) * Math.cos(rotX);
-  camera.position.y = r * Math.sin(rotX);
-  camera.position.z = r * Math.cos(rotY) * Math.cos(rotX);
+  camera.position.x = 280 * Math.cos(rotX) * Math.sin(rotY);
+  camera.position.y = 280 * Math.sin(rotX);
+  camera.position.z = 280 * Math.cos(rotX) * Math.cos(rotY);
   camera.lookAt(180, 0, 0);
 }
 
 function animate() {
   requestAnimationFrame(animate);
+  updateCamera();
   renderer.render(scene, camera);
 }
 
-function buildFuselageMesh() {
-  if (mesh) scene.remove(mesh);
-
-  const points = [];
-  // Generate points along the fuselage surface using ogive + body + boat-tail
-  const segments = 80;
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const x = t * TOTAL_LEN;
-    let r;
-    if (x <= NOSE_LEN) {
-      // Tangent ogive: r(x) = sqrt(R^2 - (L - x)^2)
-      const dx = ogive_L - x;
-      r = Math.sqrt(Math.max(0, ogive_R * ogive_R - dx * dx));
-      if (x < 0.5) r = 0;
-    } else if (x <= TAIL_START) {
-      r = MAX_R;
-    } else {
-      const bt = (x - TAIL_START) / (TOTAL_LEN - TAIL_START);
-      r = MAX_R - bt * (MAX_R - NOZZLE_R);
-    }
-    points.push({ x, r });
-  }
-
-  // Build lathe geometry
-  const lathePoints = [];
-  points.forEach(pt => {
-    lathePoints.push(new THREE.Vector2(pt.r, pt.x));
-  });
-
-  const geo = new THREE.LatheGeometry(lathePoints, 32);
-  geo.computeVertexNormals();
-
-  // Material
-  const mat = new THREE.MeshPhongMaterial({
-    color: 0x1a3a6a,
-    specular: 0x4466aa,
-    shininess: 60,
-    transparent: true,
-    opacity: 0.85,
-    side: THREE.DoubleSide,
-  });
-
-  mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.z = -Math.PI / 2; // orient along X axis
-  mesh.position.x = 0;
-  scene.add(mesh);
-
-  // Add wireframe overlay
-  const wireMat = new THREE.MeshBasicMaterial({ color: 0x224488, wireframe: true, transparent: true, opacity: 0.15 });
-  const wireMesh = new THREE.Mesh(geo.clone(), wireMat);
-  wireMesh.rotation.z = -Math.PI / 2;
-  scene.add(wireMesh);
-}
-
 // ================================================================
-// VECTOR TABLE
+// TABLE
 // ================================================================
 function buildTable() {
-  const tbody = document.querySelector("#vec-table tbody");
+  const nVec = parseInt(document.getElementById("vec-select").value);
+  const table = document.getElementById("vec-table");
+  const tbody = table.querySelector("tbody") || table;
   tbody.innerHTML = "";
 
-  const vecPerSta = parseInt(document.getElementById("vec-select").value);
-  const nVecTotal = stations.length * vecPerSta;
-  document.getElementById("dV").textContent = nVecTotal;
+  const tr0 = document.createElement("tr");
+  tr0.innerHTML = "<th>STA</th><th>X (mm)</th><th>R (mm)</th><th>Type</th><th>Y</th><th>Z</th>";
+  tbody.appendChild(tr0);
 
-  // Header
-  const header = document.createElement("tr");
-  ["STA", "X", "Y", "Z", "R", "θ", "type"].forEach(h => {
-    const th = document.createElement("th");
-    th.textContent = h;
-    header.appendChild(th);
-  });
-  tbody.appendChild(header);
+  const step = Math.max(1, Math.floor(stations.length / nVec));
+  const angles = [];
+  for (let a = 0; a < 360; a += 360 / nVec) angles.push(a * Math.PI / 180);
 
-  stations.forEach((st, si) => {
-    // Station header row
-    const hr = document.createElement("tr");
-    hr.className = "sta-hdr";
-    hr.innerHTML = `<td colspan="7">STA ${st.x.toFixed(1)} mm — r=${st.r.toFixed(3)} mm</td>`;
-    tbody.appendChild(hr);
+  for (let i = 0; i < stations.length; i += step) {
+    const s = stations[i];
+    const tr = document.createElement("tr");
+    let type = "nose";
+    if (s.x > NOSE_LEN && s.x < TAIL_START) type = "body";
+    if (s.x >= TAIL_START) type = "tail";
+    tr.innerHTML = `<td class="xcol">${i}</td><td class="xcol">${s.x.toFixed(1)}</td><td class="rcol">${s.r.toFixed(2)}</td><td>${type}</td><td class="ycol">${s.r.toFixed(2)}</td><td class="zcol">0.00</td>`;
+    tbody.appendChild(tr);
 
-    for (let a = 0; a < 360; a += 360 / vecPerSta) {
-      const theta = a * Math.PI / 180;
-      const y = st.r * Math.cos(theta);
-      const z = st.r * Math.sin(theta);
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${si}</td>
-        <td class="xcol">${st.x.toFixed(1)}</td>
-        <td class="ycol">${y.toFixed(4)}</td>
-        <td class="zcol">${z.toFixed(4)}</td>
-        <td class="rcol">${st.r.toFixed(3)}</td>
-        <td>${a}°</td>
-        <td>surface</td>
-      `;
-      tbody.appendChild(row);
+    for (const ang of angles) {
+      const y = s.r * Math.cos(ang);
+      const z = s.r * Math.sin(ang);
+      const trV = document.createElement("tr");
+      trV.innerHTML = `<td></td><td></td><td></td><td>vec ${Math.round(ang * 180 / Math.PI)}°</td><td class="ycol">${y.toFixed(2)}</td><td class="zcol">${z.toFixed(2)}</td>`;
+      tbody.appendChild(trV);
     }
-  });
-
-  // Attachment points
-  const attachRows = [
-    { name: "WING_ROOT_R", pos: [120, MAX_R, 0] },
-    { name: "WING_ROOT_L", pos: [120, -MAX_R, 0] },
-    { name: "H_STAB_ROOT_R", pos: [290, MAX_R, 0] },
-    { name: "H_STAB_ROOT_L", pos: [290, -MAX_R, 0] },
-    { name: "V_STAB_ROOT", pos: [290, 0, MAX_R] },
-    { name: "NOSE_PORT_TOP", pos: [30, 0, MAX_R] },
-    { name: "CANOPY_RAF", pos: [80, 0, MAX_R] },
-    { name: "INTAKE_LIP", pos: [360, NOZZLE_R, 0] },
-  ];
-  attachRows.forEach(ap => {
-    const [px, py, pz] = ap.pos;
-    const row = document.createElement("tr");
-    row.className = "attach-row";
-    row.innerHTML = `
-      <td>${ap.name}</td>
-      <td class="xcol">${px.toFixed(1)}</td>
-      <td class="ycol">${py.toFixed(4)}</td>
-      <td class="zcol">${pz.toFixed(4)}</td>
-      <td class="rcol">${Math.sqrt(py*py+pz*pz).toFixed(3)}</td>
-      <td>—</td>
-      <td>attach</td>
-    `;
-    tbody.appendChild(row);
-  });
+  }
 }
 
 // ================================================================
 // CONTROLS
 // ================================================================
-function toggleView(view) {
-  const btn = document.getElementById("btn-" + view);
-  const el = document.getElementById(view + "-svg") || document.getElementById(view === "cs" ? "cs-svg" : view + "-svg");
-  if (!el) return;
-  btn.classList.toggle("active");
-  el.style.display = btn.classList.contains("active") ? "block" : "none";
+let panelVisibility = { side: true, top: true, cs: true, table: true };
+
+function toggleView(id) {
+  panelVisibility[id] = !panelVisibility[id];
+  const btn = document.getElementById("btn-" + id);
+  const panels = {
+    side: document.querySelector(".p2d"),
+    top: document.querySelector(".p2d"),
+    cs: document.getElementById("cs-svg") ? document.getElementById("cs-svg").parentElement : null,
+    table: document.querySelector(".table-wrap") ? document.querySelector(".table-wrap").parentElement : null,
+  };
+  if (panels[id]) panels[id].style.display = panelVisibility[id] ? "" : "none";
+  if (btn) btn.classList.toggle("active", panelVisibility[id]);
 }
 
 function drawAll() {
@@ -814,86 +1127,58 @@ function drawAll() {
   buildTable();
 }
 
-// ================================================================
-// EXPORT
-// ================================================================
 function exportData() {
-  const lines = [];
-  lines.push("// fuselage_viewer.tsx — Generated from fuselage_viewer.html");
-  lines.push("// Physics: Mason Appendix tangent ogive + linear boat-tail");
-  lines.push("// Ogive a=" + ogive_a.toFixed(3) + "mm, c=" + ogive_c.toFixed(3) + "mm");
-  lines.push("");
-  lines.push("export const fuselageStations = [");
-  stations.forEach((st, i) => {
-    const comma = i < stations.length - 1 ? "," : "";
-    lines.push(`  { label: "STA_${st.x.toFixed(0).padStart(3,'0')}", x: ${st.x.toFixed(1)}, r: ${st.r.toFixed(4)} }${comma}`);
-  });
-  lines.push("];");
-  lines.push("");
-  lines.push("export const surfaceVectors = {");
-  stations.forEach((st, si) => {
-    const vecs = [];
-    for (let a = 0; a < 360; a += 45) {
-      const theta = a * Math.PI / 180;
-      const y = st.r * Math.cos(theta);
-      const z = st.r * Math.sin(theta);
-      vecs.push(`"STA_${st.x.toFixed(0).padStart(3,'0')}_${a}": [${st.x.toFixed(1)}, ${y.toFixed(4)}, ${z.toFixed(4)}]`);
-    }
-    lines.push("  " + vecs.join(",\n  ") + (si < stations.length - 1 ? "," : ""));
-  });
-  lines.push("};");
-  lines.push("");
-  lines.push("export const FUSELAGE_GEOMETRY = {");
-  lines.push(`  totalLength_mm: ${TOTAL_LEN},`);
-  lines.push(`  maxDiameter_mm: ${MAX_R * 2},`);
-  lines.push(`  noseLength_mm: ${NOSE_LEN},`);
-  lines.push(`  boatTailStart_mm: ${TAIL_START},`);
-  lines.push(`  nozzleRadius_mm: ${NOZZLE_R},`);
-  lines.push(`  ogive_a_mm: ${ogive_a.toFixed(3)},`);
-  lines.push(`  ogive_c_mm: ${ogive_c.toFixed(3)},`);
-  lines.push(`  noseHalfAngle_deg: ${(Math.atan2(MAX_R, NOSE_LEN) * 180 / Math.PI).toFixed(2)},`);
-  lines.push(`  stationCount: ${stations.length},`);
-  lines.push("} as const;");
-  lines.push("");
-  lines.push("export const attachmentPoints = {");
-  const ap2 = [
-    ["WING_ROOT_R", 120, MAX_R, 0],
-    ["WING_ROOT_L", 120, -MAX_R, 0],
-    ["H_STAB_ROOT_R", 290, MAX_R, 0],
-    ["H_STAB_ROOT_L", 290, -MAX_R, 0],
-    ["V_STAB_ROOT", 290, 0, MAX_R],
-    ["NOSE_PORT_TOP", 30, 0, MAX_R],
-    ["CANOPY_RAF", 80, 0, MAX_R],
-    ["INTAKE_LIP", 360, NOZZLE_R, 0],
+  const lines = [
+    "// INTERCEPTOR_HL — Geometry Data Export",
+    "// Generated by fuselage_viewer.html",
+    "",
+    "export const fuselage = {",
+    `  L: ${TOTAL_LEN},`,
+    `  maxR: ${MAX_R},`,
+    `  noseLen: ${NOSE_LEN},`,
+    `  tailStart: ${TAIL_START},`,
+    `  nozzleR: ${NOZZLE_R},`,
+    `  stations: ${JSON.stringify(stations)},`,
+    "};",
+    "",
+    "export const wing = {",
+    `  rootChord: ${WING.rootChord},`,
+    `  tipChord: ${WING.tipChord},`,
+    `  halfSpan: ${WING.halfSpan},`,
+    `  sweepLE: ${WING.sweepLE},`,
+    `  dihedral: ${WING.dihedral},`,
+    `  thicknessRoot: ${WING.thicknessRoot},`,
+    `  thicknessTip: ${WING.thicknessTip},`,
+    `  posRootX: ${WING.posRootX},`,
+    `  taper: ${(WING.tipChord / WING.rootChord).toFixed(3)},`,
+    `  span: ${WING.halfSpan * 2},`,
+    `  area: ${(0.5 * (WING.rootChord + WING.tipChord) * WING.halfSpan * 2 / 1e6).toFixed(5)},`,
+    "};",
   ];
-  ap2.forEach(([name, px, py, pz], i) => {
-    lines.push(`  ${name}: [${px}, ${py}, ${pz}]${i < ap2.length - 1 ? "," : ""}`);
-  });
-  lines.push("};");
-  lines.push("");
-  lines.push("export default fuselageStations;");
-
-  const tsx = lines.join("\n");
-  const blob = new Blob([tsx], { type: "text/plain" });
+  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "fuselage_geometry.tsx";
+  a.download = "interceptor_geometry.ts";
   a.click();
-
-  // Also update info
-  document.getElementById("dN").textContent = stations.length;
-  document.getElementById("dL").textContent = TOTAL_LEN;
-  document.getElementById("dD").textContent = MAX_R * 2;
-  document.getElementById("dNose").textContent = "Ogive (Mason)";
 }
 
-// ================================================================
-// INIT
-// ================================================================
+// ── Init ──
 window.addEventListener("load", () => {
-  document.getElementById("dN").textContent = stations.length;
   drawAll();
-  initThree();
+  if (document.getElementById("three-canvas")) {
+    initThree();
+  }
+  // Resize handler
+  window.addEventListener("resize", () => {
+    if (renderer && camera) {
+      const canvas = document.getElementById("three-canvas");
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+  });
 });
 </script>
 </body>
