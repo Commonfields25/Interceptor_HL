@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fuselage Geometry Validator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0e1a; color: #c8d8f0; font-family: 'Courier New', monospace; padding: 12px; }
+
+  h2 {
+    text-align: center;
+    color: #4af;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .info-bar {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    font-size: 10px;
+    color: #556;
+    margin-bottom: 14px;
+  }
+  .info-bar span { color: #8cf; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .panel {
+    background: #0d1424;
+    border: 1px solid #1a2a4a;
+    border-radius: 6px;
+    padding: 8px;
+  }
+
+  .panel h3 {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #559;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  svg { display: block; width: 100%; border-radius: 4px; }
+
+  /* Fuselage shape styles */
+  .fuse-skin { fill: none; stroke: #4af; stroke-width: 1.5; }
+  .fuse-fill { fill: rgba(68,170,255,0.04); }
+  .fuse-ring { fill: none; stroke: rgba(100,170,255,0.25); stroke-width: 0.5; stroke-dasharray: 3,3; }
+  .centerline { stroke: #334; stroke-width: 0.5; stroke-dasharray: 4,4; }
+  .axis-line { stroke: #222; stroke-width: 0.5; }
+  .dot { fill: #4af; stroke: #4af; stroke-width: 0.5; }
+  .dot-tip { fill: #fff; stroke: #4af; stroke-width: 1; }
+  .attach { fill: #f80; stroke: #f80; stroke-width: 0.5; r: 3; }
+  .attach-label { font-size: 7px; fill: #f80; font-family: 'Courier New', monospace; }
+  .sta-label { font-size: 7px; fill: #448; font-family: 'Courier New', monospace; }
+  .grid-line { stroke: #151525; stroke-width: 0.5; }
+  .nose-label { font-size: 8px; fill: #5af; font-family: 'Courier New', monospace; }
+  .scale-bar { font-size: 8px; fill: #446; font-family: 'Courier New', monospace; }
+
+  .table-panel {
+    background: #0d1424;
+    border: 1px solid #1a2a4a;
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .table-panel h3 { font-size: 9px; letter-spacing: 2px; color: #559; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  table { border-collapse: collapse; width: 100%; font-size: 9px; }
+  th { color: #448; letter-spacing: 1px; font-size: 8px; position: sticky; top: 0; background: #0d1424; }
+  td, th { padding: 3px 6px; border: 1px solid #151530; text-align: center; }
+  tr:hover td { background: #131f38; }
+  td.sta-hdr { color: #4af; font-weight: bold; }
+  td.attach-row { color: #f80; background: #1a1000; }
+
+  .btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+  button {
+    background: #0d1424; color: #4af; border: 1px solid #2a4a6a;
+    padding: 6px 14px; border-radius: 4px; cursor: pointer;
+    font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 1px;
+    transition: background 0.2s;
+  }
+  button:hover { background: #1a2a4a; border-color: #4af; }
+  button:active { background: #2a3a5a; }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0e1a; }
+  ::-webkit-scrollbar-thumb { background: #2a4a6a; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<h2>// Fuselage Geometry Validator //</h2>
+<div class="info-bar">
+  <div>Length: <span>360 mm</span></div>
+  <div>Max Ø: <span>Ø 36 mm</span></div>
+  <div>Scale: <span>3 px/mm</span></div>
+  <div>Stations: <span>7</span></div>
+  <div>Vectors: <span>56</span></div>
+  <div>Nose: <span>Conical</span></div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h3>TOP VIEW &mdash; X-Y plane</h3>
+    <svg id="topView" viewBox="-30 -100 1140 200"></svg>
+  </div>
+  <div class="panel">
+    <h3>SIDE VIEW &mdash; X-Z plane</h3>
+    <svg id="sideView" viewBox="-30 -150 1140 300"></svg>
+  </div>
+  <div class="panel">
+    <h3>ISOMETRIC &mdash; 3D projection</h3>
+    <svg id="isoView" viewBox="-100 -220 560 440"></svg>
+  </div>
+</div>
+
+<div class="table-panel">
+  <h3>Vector Table &mdash; (x, y, z) mm</h3>
+  <table id="vecTable"><tbody></tbody></table>
+</div>
+
+<div class="btn-row">
+  <button onclick="exportTSX()">&#9654; Export to knowledge.tsx</button>
+  <button onclick="toggleTable()">&#9660; Toggle Table</button>
+  <button onclick="toggleIso()">&#8634; Toggle Isometric Style</button>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// FUSELAGE GEOMETRY DATA
+// ─────────────────────────────────────────────
+// Scale: 3 px per mm
+const SCALE = 3;
+
+const stations = [
+  { label:"STA_000", x:  0, r:  0 },
+  { label:"STA_040", x: 40, r: 18 },
+  { label:"STA_120", x:120, r: 18 },
+  { label:"STA_240", x:240, r: 18 },
+  { label:"STA_300", x:300, r: 18 },
+  { label:"STA_330", x:330, r: 18 },
+  { label:"STA_360", x:360, r:  7 },
+];
+
+const centerline = [
+  [0,0,0],[40,0,0],[120,0,0],[240,0,0],[300,0,0],[330,0,0],[360,0,0]
+];
+
+const attachPoints = {
+  "WING_ROOT_R":   {pos:[120, 18,  0]},
+  "WING_ROOT_L":   {pos:[120,-18,  0]},
+  "H_STAB_ROOT_R": {pos:[290, 18,  0]},
+  "H_STAB_ROOT_L": {pos:[290,-18,  0]},
+  "V_STAB_ROOT":   {pos:[290,  0, 18]},
+  "NOSE_PORT_TOP": {pos:[ 30,  0, 18]},
+  "INTAKE_LIP":    {pos:[360,  7,  0]},
+  "CANOPY_RAF":    {pos:[ 80,  0, 18]},
+};
+
+// ─────────────────────────────────────────────
+// SVG HELPERS
+// ─────────────────────────────────────────────
+function el(tag, attrs) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k,v] of Object.entries(attrs||{})) e.setAttribute(k, v);
+  return e;
+}
+function line(x1,y1,x2,y2,cls) { return el("line",{x1,y1,x2,y2,class:cls||""}); }
+function circle(cx,cy,r,cls) { return el("circle",{cx,cy,r,class:cls||""}); }
+function text(x,y,txt,cls,anchor) {
+  const t = el("text",{x,y,class:cls||"", "text-anchor":anchor||"middle"});
+  t.textContent = txt;
+  return t;
+}
+
+// ─────────────────────────────────────────────
+// ISOMETRIC PROJECTION
+// ─────────────────────────────────────────────
+function iso(x,y,z) {
+  // Standard isometric: 30° angles
+  const ix =  x * SCALE      - y * SCALE * 0.5;
+  const iy = -x * SCALE * 0.3 - y * SCALE * 0.3 - z * SCALE;
+  return {ix, iy};
+}
+
+// ─────────────────────────────────────────────
+// GRID DRAWING
+// ─────────────────────────────────────────────
+function drawGrid(svg, w, h) {
+  const g = el("g",{});
+  // Vertical grid lines every 60mm = 180px
+  for (let x = 0; x <= 1080; x += 180) {
+    g.appendChild(line(x, -h/2, x, h/2, "grid-line"));
+  }
+  // Horizontal grid lines every 30px
+  for (let y = -h/2; y <= h/2; y += 30) {
+    g.appendChild(line(0, y, w, y, "grid-line"));
+  }
+  svg.appendChild(g);
+}
+
+function drawIsoGrid(svg) {
+  const g = el("g",{});
+  // Vertical grid (Z)
+  for (let z = -200; z <= 0; z += 30) {
+    for (let x = 0; x <= 1080; x += 90) {
+      const p1 = iso(x, 0, z);
+      const p2 = iso(x+90, 0, z);
+      g.appendChild(line(p1.ix, p1.iy, p2.ix, p2.iy, "grid-line"));
+    }
+  }
+  // Horizontal grid (Y)
+  for (let y = -90; y <= 90; y += 30) {
+    for (let x = 0; x <= 1080; x += 90) {
+      const p1 = iso(x, y, 0);
+      const p2 = iso(x+90, y, 0);
+      g.appendChild(line(p1.ix, p1.iy, p2.ix, p2.iy, "grid-line"));
+    }
+  }
+  svg.appendChild(g);
+}
+
+// ─────────────────────────────────────────────
+// TOP VIEW — circles at each station (XZ plane)
+// ─────────────────────────────────────────────
+function buildTopView() {
+  const svg = document.getElementById("topView");
+  const w = 1140, h = 200;
+  svg.setAttribute("viewBox", `-30 -100 ${w} ${h}`);
+
+  drawGrid(svg, w, h);
+
+  // Draw fuselage rings (cross-sections)
+  stations.forEach(st => {
+    if (st.r === 0) {
+      // Nose tip
+      svg.appendChild(circle(0, 0, 2, "dot-tip"));
+      svg.appendChild(text(0, -8, "TIP", "sta-label"));
+      return;
+    }
+    const rx = 0.5, ry = st.r * SCALE;
+    const path = document.createElementNS("http://www.w3.org/2000/svg","ellipse");
+    path.setAttribute("cx", st.x * SCALE);
+    path.setAttribute("cy", 0);
+    path.setAttribute("rx", rx);
+    path.setAttribute("ry", ry);
+    path.setAttribute("class", "fuse-ring");
+    svg.appendChild(path);
+  });
+
+  // Fuselage outline (silhouette in Y direction)
+  const silhouette = [
+    [0,0],
+    [40*SCALE, 18*SCALE],
+    [120*SCALE, 18*SCALE],
+    [240*SCALE, 18*SCALE],
+    [300*SCALE, 18*SCALE],
+    [330*SCALE, 18*SCALE],
+    [360*SCALE, 7*SCALE],
+    [360*SCALE, -7*SCALE],
+    [330*SCALE, -18*SCALE],
+    [300*SCALE, -18*SCALE],
+    [240*SCALE, -18*SCALE],
+    [120*SCALE, -18*SCALE],
+    [40*SCALE, -18*SCALE],
+    [0, 0],
+  ];
+  const pts = silhouette.map(p=>p.join(",")).join(" ");
+  const p = el("polygon", {points:pts, class:"fuse-fill"});
+  svg.appendChild(p);
+  const p2 = el("polyline", {points:pts, class:"fuse-skin"});
+  svg.appendChild(p2);
+
+  // Axis
+  svg.appendChild(line(0, 0, 1080, 0, "axis-line"));
+  svg.appendChild(text(-18, 4, "Y", "sta-label", "middle"));
+  svg.appendChild(text(1100, 4, "X", "sta-label", "end"));
+
+  // Station labels
+  stations.forEach(st => {
+    svg.appendChild(text(st.x*SCALE, -st.r*SCALE-10, st.label, "sta-label"));
+  });
+
+  // Scale bar
+  svg.appendChild(line(50, 80, 50+300, 80, "fuse-skin"));
+  svg.appendChild(text(200, 75, "100 mm", "scale-bar"));
+
+  // Attachment points
+  Object.entries(attachPoints).forEach(([name, ap]) => {
+    const [px, py] = ap.pos;
+    const cx = px * SCALE;
+    const cy = py * SCALE;
+    svg.appendChild(circle(cx, cy, 3, "attach"));
+    svg.appendChild(text(cx+5, cy-5, name, "attach-label", "start"));
+  });
+}
+
+// ─────────────────────────────────────────────
+// SIDE VIEW — profile (X-Z plane)
+// ─────────────────────────────────────────────
+function buildSideView() {
+  const svg = document.getElementById("sideView");
+  const w = 1140, h = 300;
+  svg.setAttribute("viewBox", `-30 -130 ${w} ${h}`);
+
+  drawGrid(svg, w, h);
+
+  // Fuselage profile: upper edge points (conical nose, cylinder, tapered tail)
+  // Upper profile: Z = +radius at each x
+  const upper = [
+    [0,  0],   // nose tip
+    [40, 18],  // nose shoulder
+    [120, 18], // body
+    [240, 18],
+    [300, 18],
+    [330, 18], // start of taper
+    [360,  7], // engine mouth
+  ];
+  const upperPts = upper.map(p=>`${p[0]*SCALE},${-p[1]*SCALE}`).join(" ");
+  const lowerPts = upper.map(p=>`${p[0]*SCALE},${p[1]*SCALE}`).join(" ");
+
+  const fillPts = upperPts + " " + lowerPts.split(" ").reverse().join(" ");
+  svg.appendChild(el("polygon", {points:fillPts, class:"fuse-fill"}));
+
+  // Upper silhouette
+  const uPts = upper.map(p=>`${p[0]*SCALE},${-p[1]*SCALE}`).join(" ");
+  svg.appendChild(el("polyline", {points:uPts, class:"fuse-skin"}));
+  // Lower silhouette
+  const lPts = upper.map(p=>`${p[0]*SCALE},${p[1]*SCALE}`).join(" ");
+  svg.appendChild(el("polyline", {points:lPts, class:"fuse-skin"}));
+
+  // Nose angle annotation
+  const noseAngle = Math.atan2(18,40) * 180/Math.PI;
+  const nx = 20*SCALE, ny = -9*SCALE;
+  svg.appendChild(text(nx, ny, `α=${noseAngle.toFixed(1)}°`, "nose-label", "start"));
+
+  // Station rings (horizontal lines at each station)
+  stations.forEach(st => {
+    if (st.r === 0) {
+      svg.appendChild(circle(0, 0, 2, "dot-tip"));
+      svg.appendChild(text(0, 10, "TIP", "sta-label"));
+      return;
+    }
+    const cx = st.x * SCALE;
+    svg.appendChild(line(cx, -st.r*SCALE, cx, st.r*SCALE, "fuse-ring"));
+  });
+
+  // Centerline
+  svg.appendChild(line(0, 0, 1080, 0, "centerline"));
+  svg.appendChild(text(-18, 4, "Z", "sta-label"));
+  svg.appendChild(text(1100, 4, "X", "sta-label", "end"));
+
+  // Scale bar
+  svg.appendChild(line(50, 120, 50+300, 120, "fuse-skin"));
+  svg.appendChild(text(200, 115, "100 mm", "scale-bar"));
+
+  // Station labels
+  stations.forEach(st => {
+    svg.appendChild(text(st.x*SCALE, st.r*SCALE+12, st.label, "sta-label"));
+  });
+
+  // Attachment points
+  Object.entries(attachPoints).forEach(([name, ap]) => {
+    const [px,, pz] = ap.pos;
+    const cx = px * SCALE;
+    const cz = pz * SCALE;
+    svg.appendChild(circle(cx, -cz, 3, "attach"));
+    svg.appendChild(text(cx+5, -(cz)-5, name, "attach-label", "start"));
+  });
+}
+
+// ─────────────────────────────────────────────
+// ISOMETRIC VIEW
+// ─────────────────────────────────────────────
+let isoStyle = 0;
+const isoStyles = [
+  { ringAlpha:"0.3",  skinWidth:1.5, bg:"#0d1424" },
+  { ringAlpha:"0.6",  skinWidth:2.0, bg:"#0d1424" },
+  { ringAlpha:"0.15", skinWidth:1.0, bg:"#0d1424" },
+];
+
+function buildIsoView() {
+  const svg = document.getElementById("isoView");
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", `-100 -220 560 440`);
+  svg.style.background = isoStyles[isoStyle].bg;
+
+  drawIsoGrid(svg);
+
+  const stl = isoStyles[isoStyle];
+
+  // Draw cross-section rings
+  stations.forEach(st => {
+    if (st.r === 0) {
+      const p = iso(0, 0, 0);
+      svg.appendChild(circle(p.ix, p.iy, 3, "dot-tip"));
+      return;
+    }
+    let ringPts = [];
+    for (let a = 0; a <= 360; a += 10) {
+      const theta = a * Math.PI / 180;
+      const y = st.r * Math.cos(theta);
+      const z = st.r * Math.sin(theta);
+      const p = iso(st.x, y, z);
+      ringPts.push(`${p.ix},${p.iy}`);
+    }
+    const ringPath = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    ringPath.setAttribute("points", ringPts.join(" "));
+    ringPath.setAttribute("fill", "none");
+    ringPath.setAttribute("stroke", `rgba(68,170,255,${stl.ringAlpha})`);
+    ringPath.setAttribute("stroke-width", stl.skinWidth * 0.5);
+    ringPath.setAttribute("stroke-dasharray", "3,3");
+    svg.appendChild(ringPath);
+  });
+
+  // Fuselage skin lines (longitudinal)
+  const angles = [0, 45, 90, 135, 180, 225, 270, 315].map(a => a * Math.PI / 180);
+  angles.forEach(theta => {
+    let upperPts = [];
+    let lowerPts = [];
+    stations.forEach(st => {
+      if (st.r === 0) {
+        const p = iso(st.x, 0, 0);
+        upperPts.push([p.ix, p.iy]);
+        lowerPts.push([p.ix, p.iy]);
+        return;
+      }
+      const y = st.r * Math.cos(theta);
+      const z = st.r * Math.sin(theta);
+      const p = iso(st.x, y, z);
+      upperPts.push([p.ix, p.iy - z * SCALE * 0.05]);
+      lowerPts.push([p.ix, p.iy + z * SCALE * 0.05]);
+    });
+    const pathStr = pts => pts.map(p=>p.join(",")).join(" ");
+    const sp = el("polyline", {points:pathStr(upperPts), class:"fuse-skin"});
+    sp.setAttribute("stroke-width", stl.skinWidth * 0.4);
+    svg.appendChild(sp);
+  });
+
+  // Centerline
+  let clPts = [];
+  stations.forEach(st => {
+    const p = iso(st.x, 0, 0);
+    clPts.push(`${p.ix},${p.iy}`);
+  });
+  svg.appendChild(el("polyline", {points:clPts.join(" "), class:"centerline"}));
+
+  // Station labels
+  stations.forEach(st => {
+    const p = iso(st.x, -24, 24);
+    svg.appendChild(text(p.ix, p.iy, st.label, "sta-label"));
+  });
+
+  // Attachment points
+  Object.entries(attachPoints).forEach(([name, ap]) => {
+    const [px, py, pz] = ap.pos;
+    const p = iso(px, py, pz);
+    svg.appendChild(circle(p.ix, p.iy, 4, "attach"));
+    svg.appendChild(text(p.ix + 5, p.iy - 4, name, "attach-label", "start"));
+  });
+
+  // Axis labels
+  svg.appendChild(text(iso(1080,0,0).ix + 10, iso(1080,0,0).iy + 4, "X", "sta-label", "start"));
+  svg.appendChild(text(iso(0,100,0).ix, iso(0,100,0).iy, "Y", "sta-label"));
+  svg.appendChild(text(iso(0,0,-100).ix, iso(0,0,-100).iy, "Z", "sta-label"));
+}
+
+function toggleIso() {
+  isoStyle = (isoStyle + 1) % isoStyles.length;
+  buildIsoView();
+}
+
+// ─────────────────────────────────────────────
+// VECTOR TABLE
+// ─────────────────────────────────────────────
+function buildTable() {
+  const tbody = document.querySelector("#vecTable tbody");
+  tbody.innerHTML = "";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `<tr>
+    <th>Vector ID</th><th>X (mm)</th><th>Y (mm)</th><th>Z (mm)</th><th>Radius</th><th>Theta</th>
+  </tr>`;
+  tbody.appendChild(thead);
+
+  // Station rows
+  stations.forEach(st => {
+    for (let a = 0; a < 360; a += 45) {
+      const theta = a * Math.PI / 180;
+      const y = st.r * Math.cos(theta);
+      const z = st.r * Math.sin(theta);
+      const row = document.createElement("tr");
+      const staShort = st.label.replace("STA_", "");
+      row.innerHTML = `
+        <td class="sta-hdr">${st.label}_${String(a).padStart(3,"0")}</td>
+        <td>${st.x.toFixed(1)}</td>
+        <td>${y.toFixed(4)}</td>
+        <td>${z.toFixed(4)}</td>
+        <td>${st.r.toFixed(1)}</td>
+        <td>${a}°</td>
+      `;
+      tbody.appendChild(row);
+    }
+  });
+
+  // Attachment points
+  Object.entries(attachPoints).forEach(([name, ap]) => {
+    const [px, py, pz] = ap.pos;
+    const row = document.createElement("tr");
+    row.className = "attach-row";
+    row.innerHTML = `
+      <td>${name}</td>
+      <td>${px.toFixed(1)}</td>
+      <td>${py.toFixed(4)}</td>
+      <td>${pz.toFixed(4)}</td>
+      <td>${Math.sqrt(py*py+pz*pz).toFixed(4)}</td>
+      <td>—</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// ─────────────────────────────────────────────
+// EXPORT TO knowledge.tsx FORMAT
+// ─────────────────────────────────────────────
+function exportTSX() {
+  const lines = [];
+  lines.push("// Fuselage Geometry Vectors — Auto-generated");
+  lines.push("// Origin: nose tip at x=0, y=0, z=0  |  1 unit = 1 mm");
+  lines.push("");
+  lines.push("export const fuselageStations = [");
+
+  const attachLines = [];
+  const clLines = [];
+
+  stations.forEach(st => {
+    lines.push(`  { label: "${st.label}", x: ${st.x}, r: ${st.r} },`);
+  });
+  lines.push("];");
+  lines.push("");
+  lines.push("// 56 circumferential vectors (7 stations × 8 pts @ 45°)");
+  lines.push("// y = r·cos(θ), z = r·sin(θ), θ from Y-axis → Z-axis");
+  lines.push("export const fuselageVectors: Record<string, [number,number,number]> = {");
+
+  stations.forEach(st => {
+    for (let a = 0; a < 360; a += 45) {
+      const theta = a * Math.PI / 180;
+      const y = st.r * Math.cos(theta);
+      const z = st.r * Math.sin(theta);
+      const id = `${st.label}_${String(a).padStart(3,"0")}`;
+      lines.push(`  "${id}": [${st.x.toFixed(1).padStart(5)}, ${y.toFixed(4).padStart(10)}, ${z.toFixed(4).padStart(10)}],`);
+    }
+  });
+
+  lines.push("};");
+  lines.push("");
+  lines.push("// Centerline (nose→tail)");
+  lines.push("export const fuselageCenterline: [number,number,number][] = [");
+  centerline.forEach(pt => {
+    lines.push(`  [${pt[0].toFixed(1).padStart(5)}, ${pt[1].toFixed(4).padStart(10)}, ${pt[2].toFixed(4).padStart(10)}],`);
+  });
+  lines.push("];");
+  lines.push("");
+  lines.push("// Key attachment points on fuselage surface");
+  lines.push("export const fuselageAttachPoints: Record<string, [number,number,number]> = {");
+
+  Object.entries(attachPoints).forEach(([name, ap]) => {
+    const [px, py, pz] = ap.pos;
+    lines.push(`  "${name.padEnd(16)}": [${px.toFixed(1).padStart(5)}, ${py.toFixed(4).padStart(10)}, ${pz.toFixed(4).padStart(10)}],`);
+  });
+  lines.push("};");
+  lines.push("");
+  lines.push("export default fuselageStations;");
+
+  const tsx = lines.join("\n");
+
+  // Download
+  const blob = new Blob([tsx], {type: "text/typescript"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "knowledge.tsx";
+  a.click();
+
+  // Also show in textarea
+  const ta = document.createElement("textarea");
+  ta.style.cssText = "position:fixed;bottom:10px;left:10px;width:600px;height:300px;background:#0a0e1a;color:#4af;border:1px solid #2a4a6a;font-size:10px;z-index:999;border-radius:6px;";
+  ta.value = tsx;
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+}
+
+function toggleTable() {
+  const panel = document.querySelector(".table-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+buildTopView();
+buildSideView();
+buildIsoView();
+buildTable();
+</script>
+</body>
+</html>
